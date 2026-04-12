@@ -25,7 +25,7 @@ impl fmt::Display for Value {
             Value::Str(s) => s.clone(),
             Value::Bool(b) => format!("{}", b),
             Value::Nil => "nil".to_string(),
-            Value::Callable(func) => format!("<fn {}>", func.name()),
+            Value::Callable(func) => format!("{}", func.to_string()),
             Value::Instance(instance) => format!("<instance of {}>", instance.class.name()),
         };
         write!(f, "{}", out)
