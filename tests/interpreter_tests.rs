@@ -1,4 +1,5 @@
 use rust_interpreter::{Interpreter, Parser, Value, scan};
+use std::rc::Rc;
 use rust_interpreter::runtime::{Callable, EnvRef, Environment, Function};
 use rust_interpreter::Expr;
 use rust_interpreter::ast::Statement;
@@ -85,8 +86,8 @@ fn function_call_returns_sum() {
     let func = Function::from_statement(&stmt, env.clone()).unwrap_or_else(|_| panic!("function build error"));
     
     // Call the function with args
-    let result = func
-        .call(&mut interpreter, vec![Value::Float(2.0), Value::Float(3.0)]);
+    let result = Rc::new(func);
+    let result = result.call(&mut interpreter, vec![Value::Float(2.0), Value::Float(3.0)]);
     match result {
         Ok(value) => assert!(matches!(value, Value::Float(n) if n == 5.0)),
         Err(control_flow) => {
