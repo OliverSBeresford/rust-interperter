@@ -53,6 +53,7 @@ impl<'a> Resolver<'a> {
             Statement::While { condition, body } => self.resolve_while_statement(condition, body),
             Statement::Function { name, params, body } => self.resolve_function_statement(name, params, body), // Declare function
             Statement::Return { value, keyword } => self.resolve_return_statement(value, keyword),
+            Statement::Class { name, methods } => self.resolve_class_statement(name, methods),
         }
     }
 
@@ -186,6 +187,14 @@ impl<'a> Resolver<'a> {
 
         // Restore the previous function type
         self.current_function = enclosing_function;
+
+        Ok(())
+    }
+
+    fn resolve_class_statement(&mut self, name: &mut Token, methods: &mut Vec<Statement>) -> Output {
+        // Declare the class name
+        self.declare(name)?;
+        self.define(name)?;
 
         Ok(())
     }

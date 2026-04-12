@@ -5,6 +5,7 @@ use crate::runtime::environment::{EnvRef, Environment};
 use crate::runtime::interpreter::Interpreter;
 use crate::runtime::RuntimeError;
 use crate::runtime::value::Value;
+use std::rc::Rc;
 
 pub type FunctionResult<T> = Result<T, ControlFlow>;
 
@@ -46,7 +47,7 @@ impl Callable for Function {
         self.params.len()
     }
 
-    fn call(&self, interpreter: &mut Interpreter, args: Vec<Value>) -> FunctionResult<Value> {
+    fn call(self: Rc<Self>, interpreter: &mut Interpreter, args: Vec<Value>) -> FunctionResult<Value> {
         let previous_environment = interpreter.environment.clone();
 
         let environment: EnvRef = Environment::new(Some(self.closure.clone()));

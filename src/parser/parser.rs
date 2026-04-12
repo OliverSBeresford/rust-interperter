@@ -122,9 +122,20 @@ impl Parser {
                 Err(err)
             });
         } else if self.check(&[TokenType::Keyword(Keyword::Fun)]) {
+            // Consume the 'fun' keyword
+            self.advance()?;
+
             // Function declaration
             return self
                 .function_declaration("function")
+                .or_else(|err: ParseError| {
+                    self.synchronize(); // Synchronize on error
+                    Err(err)
+                });
+        } else if self.check(&[TokenType::Keyword(Keyword::Class)]) {
+            // Class declaration
+            return self
+                .class_declaration()
                 .or_else(|err: ParseError| {
                     self.synchronize(); // Synchronize on error
                     Err(err)
@@ -167,9 +178,6 @@ impl Parser {
     }
 
     fn function_declaration(&mut self, kind: &str) -> Result<Statement, ParseError> {
-        // Consume the 'fun' keyword
-        let _fun_token = self.advance();
-
         // Consume the function name
         let name_token = self.consume(TokenType::Identifier, &format!("Expect {} name.", kind))?;
 
@@ -210,6 +218,28 @@ impl Parser {
         };
 
         Ok(Statement::Function { name: name_token, params, body })
+    }
+
+    fn class_declaration(&mut self) -> Result<Statement, ParseError> {
+        // Consume the 'class' keyword
+        let _class_token = self.advance();
+
+        // Consume the class name
+        let name_token = self.consume(TokenType::Identifier, "Expect class name.")?;
+
+        // Consume the '{' token
+        self.consume(TokenType::LeftBrace, "Expect '{' before class body.")?;
+
+        // Parse the methods in the class
+        let mut methods: Vec<Statement> = Vec::new();
+        while !self.check(&[TokenType::RightBrace]) && self.current < self.tokens.len() - 1 {
+            methods.push(self.function_declaration("method")?);
+        }
+
+        // Consume the '}' token
+        self.consume(TokenType::RightBrace, "Expect '}' after class body.")?;
+
+        Ok(Statement::Class { name: name_token, methods })
     }
 
     fn statement(&mut self) -> Result<Statement, ParseError> {

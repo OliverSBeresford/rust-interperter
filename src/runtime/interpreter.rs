@@ -9,6 +9,7 @@ use crate::runtime::function::Function;
 use crate::runtime::callable::Callable;
 use crate::runtime::runtime_error::RuntimeError;
 use crate::runtime::value::Value;
+use crate::runtime::class::Class;
 
 pub type InterpreterResult<T> = Result<T, ControlFlow>;
 
@@ -25,6 +26,7 @@ impl fmt::Display for Value {
             Value::Bool(b) => format!("{}", b),
             Value::Nil => "nil".to_string(),
             Value::Callable(func) => format!("<fn {}>", func.name()),
+            Value::Instance(instance) => format!("<instance of {}>", instance.class.name()),
         };
         write!(f, "{}", out)
     }
@@ -183,6 +185,15 @@ impl Interpreter {
         Ok(Value::Nil)
     }
 
+    fn execute_class_statement(&mut self, name: &Token, methods: &[Statement]) -> InterpreterResult<Value> {
+        // Define the class in the current environment
+        self.environment
+            .borrow_mut()
+            .define(name.lexeme.to_string(), Value::Callable(Rc::new(Class { name: name.lexeme.clone(), methods: methods.to_vec() })));
+
+        Ok(Value::Nil)
+    }
+
     fn execute_return_statement(&mut self, _keyword: &Token, value: &Option<Expr>) -> InterpreterResult<Value> {
         // Evaluate the return value expression if it exists, otherwise use nil
         let return_value = if let Some(value_expr) = value {
@@ -211,6 +222,7 @@ impl Interpreter {
             Statement::While { condition, body } => self.execute_while_statement(condition, body),
             Statement::Function { .. } => self.execute_function_statement(statement), // Declare function
             Statement::Return { keyword, value } => self.execute_return_statement(keyword, value),
+            Statement::Class { name, methods } => self.execute_class_statement(name, methods),
         }
     }
 

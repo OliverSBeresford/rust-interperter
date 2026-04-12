@@ -34,4 +34,8 @@ pub enum Statement {
         keyword: Token,
         value: Option<Expr>,
     },
+    Class {
+        name: Token,
+        methods: Vec<Statement>,
+    },
 }
