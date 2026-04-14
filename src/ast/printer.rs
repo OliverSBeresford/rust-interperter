@@ -27,6 +27,7 @@ impl AstPrinter {
             Expr::LogicAnd { left, right } => self.visit_logic_and(left, right),
             Expr::Call { callee, arguments , ..} => self.visit_call(callee, arguments),
             Expr::Lambda { params, .. } => self.visit_lambda(params),
+            Expr::Get { object, name } => self.visit_get(object, name),
 
         }
     }
@@ -77,5 +78,9 @@ impl AstPrinter {
         let mut result = format!("(lambda with ({})", param_list.join(" "));
         result.push(')');
         result
+    }
+
+    fn visit_get(&self, object: &Expr, name: &Token) -> Output {
+        format!("(get {} {})", self.visit(object), name.lexeme)
     }
 }
