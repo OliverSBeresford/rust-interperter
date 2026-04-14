@@ -597,6 +597,17 @@ impl Parser {
         loop {
             if self.check(&[TokenType::LeftParen]) {
                 expr = self.finish_call(expr)?;
+            } else if self.check(&[TokenType::Dot]) {
+                // Consume the '.' token
+                self.advance()?;
+
+                // Consume the property name
+                let name_token = self.consume(TokenType::Identifier, "Expect property name after '.'.")?;
+
+                expr = Expr::Get {
+                    object: Box::new(expr),
+                    name: name_token,
+                };
             } else {
                 break;
             }

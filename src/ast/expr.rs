@@ -48,6 +48,10 @@ pub enum Expr {
         paren: Token,
         arguments: Vec<Expr>,
     },
+    Get {
+        object: Box<Expr>,
+        name: Token,
+    },
     Lambda {
         params: Vec<Token>,
         body: Vec<Statement>,

@@ -70,6 +70,7 @@ impl<'a> Resolver<'a> {
             Expr::LogicOr { left, right } => self.resolve_logic_expr(left, right),
             Expr::LogicAnd { left, right } => self.resolve_logic_expr(left, right),
             Expr::Call { callee, arguments , ..} => self.resolve_call_expr(callee, arguments),
+            Expr::Get { object, .. } => self.resolve_expression(object),
             Expr::Lambda { .. } => Ok(()),
         }
     }

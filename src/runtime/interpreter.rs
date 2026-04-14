@@ -105,6 +105,7 @@ impl Interpreter {
             Expr::LogicAnd { left, right } => self.logic_and(left, right),
             Expr::Call { callee, paren, arguments } => self.call_expr(callee, paren, arguments),
             Expr::Lambda { params, body } => self.lambda_expression(params, body),
+            Expr::Get { object, name } => self.visit_get(object, name),
         }
     }
 
@@ -489,6 +490,16 @@ impl Interpreter {
 
         // Return the lambda as a callable Value
         Ok(Value::Callable(Rc::new(lambda_function)))
+    }
+
+    fn visit_get(&mut self, object: &Expr, name: &Token) -> InterpreterResult<Value> {
+        let object_value = self.evaluate(object)?;
+
+        if let Value::Instance(instance) = object_value {
+            Ok(instance.get(name)?)
+        } else {
+            Self::error(name, "Only instances have properties.")
+        }
     }
 }
 
