@@ -2,6 +2,7 @@ use std::env;
 use std::fs;
 use std::io::{self, Write};
 use rust_interpreter::parser::Resolver;
+use rust_interpreter::ast::visitor::Visitor;
 
 use rust_interpreter::{AstPrinter, ControlFlow, Interpreter, Parser, scan};
 
@@ -72,7 +73,7 @@ fn main() {
 
             // Create an interpreter and evaluate the expression
             let mut interpreter = Interpreter::new();
-            let result = interpreter.evaluate(&expression).unwrap_or_else(|control_flow| {
+            let result = interpreter.visit_expression(&expression).unwrap_or_else(|control_flow| {
                 if let ControlFlow::RuntimeError(runtime_error) = control_flow {
                     eprintln!("{}", runtime_error);
                     std::process::exit(70);

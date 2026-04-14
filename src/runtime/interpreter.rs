@@ -1,6 +1,6 @@
 use std::fmt;
 use std::rc::Rc;
-use crate::ast::{Expr, Statement, Depth};
+use crate::ast::{Depth, Expr, Statement, Visitor};
 use crate::lexer::token::{Literal, Token, TokenType};
 use crate::runtime::clock::Clock;
 use crate::runtime::control_flow::ControlFlow;
@@ -92,33 +92,6 @@ impl Interpreter {
         }
     }
 
-    pub fn evaluate(&mut self, expression: &Expr) -> InterpreterResult<Value> {
-        match expression {
-            Expr::Binary { left, operator, right } => self.visit_binary(left, operator, right),
-            Expr::Literal { value } => self.visit_literal(value),
-            Expr::Grouping { expression } => self.visit_grouping(expression),
-            Expr::Unary { operator, right } => self.visit_unary(operator, right),
-            // Handle variable expressions
-            Expr::Variable { name, depth } => self.lookup_variable(name, *depth),
-            Expr::Assign { name, value, depth } => self.assign_variable(name, value, *depth),
-            Expr::LogicOr { left, right } => self.logic_or(left, right),
-            Expr::LogicAnd { left, right } => self.logic_and(left, right),
-            Expr::Call { callee, paren, arguments } => self.call_expr(callee, paren, arguments),
-            Expr::Lambda { params, body } => self.lambda_expression(params, body),
-            Expr::Get { object, name } => self.visit_get(object, name),
-        }
-    }
-
-    fn execute_expression(&mut self, expression: &Expr) -> InterpreterResult<Value> {
-        self.evaluate(expression)
-    }
-
-    fn execute_print(&mut self, expression: &Expr) -> InterpreterResult<Value> {
-        let value = self.evaluate(expression)?;
-        println!("{}", value);
-        Ok(Value::Nil)
-    }
-
     pub fn execute_block(&mut self, statements: &[Statement], environment: EnvRef) -> InterpreterResult<Value> {
         // Create a new environment enclosed by the current one
         let previous_environment = self.environment.clone();
@@ -126,7 +99,7 @@ impl Interpreter {
 
         // Execute each statement in the block
         for statement in statements {
-            self.execute(statement)?;
+            self.visit_statement(statement)?;
         }
 
         // Restore the previous environment
@@ -135,24 +108,79 @@ impl Interpreter {
         Ok(Value::Nil)
     }
 
-    fn execute_if_statement(&mut self, condition: &Expr, then_branch: &Statement, else_branch: &Option<Box<Statement>>) -> InterpreterResult<Value> {
-        let condition_value = self.evaluate(condition)?;
+    // Interpret (run) a series of statements (can be used for the whole program or a block)
+    pub fn interpret(&mut self, statements: &[Statement]) {
+        for statement in statements {
+            if let Err(ControlFlow::RuntimeError(runtime_error)) = self.visit_statement(&statement) {
+                eprintln!("{}", runtime_error);
+                std::process::exit(70);
+            }
+        }
+    }
+
+    fn lookup_variable(&mut self, name: &Token, depth: Depth) -> InterpreterResult<Value> {
+        match depth {
+            Depth::Unresolved => self.globals.borrow().get(&name.lexeme, name.line),
+            Depth::Resolved(distance) => self.environment.borrow().get_at(distance, &name.lexeme, name.line),
+        }
+    }
+
+    fn assign_variable(&mut self, name: &Token, value_expr: &Expr, depth: Depth) -> InterpreterResult<Value> {
+        // Evaluate the value expression
+        let evaluated_value = self.visit_expression(value_expr)?;
+
+        // Assign the value to the variable at the correct depth
+        match depth {
+            Depth::Unresolved => {
+                self.globals
+                    .borrow_mut()
+                    .assign(&name.lexeme, evaluated_value.clone(), name.line)?;
+            }
+            Depth::Resolved(distance) => {
+                self.environment
+                    .borrow_mut()
+                    .assign_at(distance, &name.lexeme, evaluated_value.clone(), name.line)?; // Ensure variable exists
+            }
+        }
+
+        // Return the assigned value
+        Ok(evaluated_value)
+    }
+}
+impl Visitor<InterpreterResult<Value>> for Interpreter {
+    fn visit_expression_statement(&mut self, expression: &Expr) -> InterpreterResult<Value> {
+        self.visit_expression(expression)
+    }
+
+    fn visit_print_statement(&mut self, expression: &Expr) -> InterpreterResult<Value> {
+        let value = self.visit_expression(expression)?;
+        println!("{}", value);
+        Ok(Value::Nil)
+    }
+
+    fn visit_block_statement(&mut self, statements: &[Statement]) -> InterpreterResult<Value> {
+        // Execute the block in a new environment enclosed by the current one
+        self.execute_block(statements, Environment::new(Some(self.environment.clone())))
+    }
+
+    fn visit_if_statement(&mut self, condition: &Expr, then_branch: &Statement, else_branch: &Option<Box<Statement>>) -> InterpreterResult<Value> {
+        let condition_value = self.visit_expression(condition)?;
 
         // Execute the then_branch if the condition is truthy, otherwise execute the else_branch if it exists
         if Self::is_truthy(&condition_value) {
-            self.execute(then_branch)
+            self.visit_statement(then_branch)
         } else if let Some(else_stmt) = else_branch {
-            self.execute(else_stmt)
+            self.visit_statement(else_stmt)
         } else {
             Ok(Value::Nil)
         }
     }
 
-    fn execute_var_statement(&mut self, name: &Token, initializer: &Option<Expr>) -> InterpreterResult<Value> {
+    fn visit_var_statement(&mut self, name: &Token, initializer: &Option<Expr>) -> InterpreterResult<Value> {
         // Evaluate the initializer expression if it exists, otherwise use nil
         let mut value: Value = Value::Nil;
         if let Some(init_expr) = initializer {
-            let evaluated_value = self.evaluate(init_expr)?;
+            let evaluated_value = self.visit_expression(init_expr)?;
             value = evaluated_value;
         }
 
@@ -163,10 +191,10 @@ impl Interpreter {
         Ok(Value::Nil)
     }
 
-    fn execute_while_statement(&mut self, condition: &Expr, body: &Statement) -> InterpreterResult<Value> {
+    fn visit_while_statement(&mut self, condition: &Expr, body: &Statement) -> InterpreterResult<Value> {
         // Evaluate the condition and execute the body while the condition is truthy
-        while Self::is_truthy(&self.evaluate(condition)?) {
-            self.execute(body)?;
+        while Self::is_truthy(&self.visit_expression(condition)?) {
+            self.visit_statement(body)?;
         }
 
         // Doesn't return anything
@@ -174,7 +202,7 @@ impl Interpreter {
     }
 
     // Declare and define a function
-    fn execute_function_statement(&mut self, statement: &Statement) -> InterpreterResult<Value> {
+    fn visit_function_statement(&mut self, statement: &Statement) -> InterpreterResult<Value> {
         // Create a Function from the statement
         let function: Function = Function::from_statement(statement, self.environment.clone())?;
 
@@ -186,7 +214,7 @@ impl Interpreter {
         Ok(Value::Nil)
     }
 
-    fn execute_class_statement(&mut self, name: &Token, methods: &[Statement]) -> InterpreterResult<Value> {
+    fn visit_class_statement(&mut self, name: &Token, methods: &[Statement]) -> InterpreterResult<Value> {
         // Define the class in the current environment
         self.environment
             .borrow_mut()
@@ -195,10 +223,10 @@ impl Interpreter {
         Ok(Value::Nil)
     }
 
-    fn execute_return_statement(&mut self, _keyword: &Token, value: &Option<Expr>) -> InterpreterResult<Value> {
+    fn visit_return_statement(&mut self, keyword: &Token, value: &Option<Expr>) -> InterpreterResult<Value> {
         // Evaluate the return value expression if it exists, otherwise use nil
         let return_value = if let Some(value_expr) = value {
-            self.evaluate(value_expr)?
+            self.visit_expression(value_expr)?
         } else {
             Value::Nil
         };
@@ -207,35 +235,9 @@ impl Interpreter {
         Err(ControlFlow::Return(return_value))
     }
 
-    // Execute a single statement
-    pub fn execute(&mut self, statement: &Statement) -> InterpreterResult<Value> {
-        match statement {
-            Statement::Expression { expression } => self.execute_expression(expression),
-            Statement::Print { expression } => self.execute_print(expression),
-            Statement::Var { name, initializer } => self.execute_var_statement(name, initializer),
-            // Execute a block statement in a new enclosed environment
-            Statement::Block { statements } => self.execute_block(&statements, Environment::new(Some(self.environment.clone()))),
-            Statement::If { condition, then_branch, else_branch } => self.execute_if_statement(condition, then_branch, else_branch),
-            Statement::While { condition, body } => self.execute_while_statement(condition, body),
-            Statement::Function { .. } => self.execute_function_statement(statement), // Declare function
-            Statement::Return { keyword, value } => self.execute_return_statement(keyword, value),
-            Statement::Class { name, methods } => self.execute_class_statement(name, methods),
-        }
-    }
-
-    // Interpret (run) a series of statements (can be used for the whole program or a block)
-    pub fn interpret(&mut self, statements: &[Statement]) {
-        for statement in statements {
-            if let Err(ControlFlow::RuntimeError(runtime_error)) = self.execute(&statement) {
-                eprintln!("{}", runtime_error);
-                std::process::exit(70);
-            }
-        }
-    }
-
     fn visit_binary(&mut self, left: &Expr, operator: &Token, right: &Expr) -> InterpreterResult<Value> {
-        let left_value = self.evaluate(left)?;
-        let right_value = self.evaluate(right)?;
+        let left_value = self.visit_expression(left)?;
+        let right_value = self.visit_expression(right)?;
         let non_numeric = !matches!(left_value, Value::Float(_) | Value::Integer(_))
             || !matches!(right_value, Value::Float(_) | Value::Integer(_));
         let either_floating =
@@ -359,12 +361,12 @@ impl Interpreter {
 
     // Evaluate the inner expression
     fn visit_grouping(&mut self, expression: &Expr) -> InterpreterResult<Value> {
-        self.evaluate(expression)
+        self.visit_expression(expression)
     }
 
     fn visit_unary(&mut self, operator: &Token, right: &Expr) -> InterpreterResult<Value> {
         // Evaluate the right-hand side expression
-        let right_value = self.evaluate(right)?;
+        let right_value = self.visit_expression(right)?;
 
         // Apply the unary operator
         match operator.token_type {
@@ -387,38 +389,17 @@ impl Interpreter {
         }
     }
 
-    fn lookup_variable(&mut self, name: &Token, depth: Depth) -> InterpreterResult<Value> {
-        match depth {
-            Depth::Unresolved => self.globals.borrow().get(&name.lexeme, name.line),
-            Depth::Resolved(distance) => self.environment.borrow().get_at(distance, &name.lexeme, name.line),
-        }
+    fn visit_variable(&mut self, name: &Token, depth: &Depth) -> InterpreterResult<Value> {
+        self.lookup_variable(name, *depth)
     }
 
-    fn assign_variable(&mut self, name: &Token, value_expr: &Expr, depth: Depth) -> InterpreterResult<Value> {
-        // Evaluate the value expression
-        let evaluated_value = self.evaluate(value_expr)?;
-
-        // Assign the value to the variable at the correct depth
-        match depth {
-            Depth::Unresolved => {
-                self.globals
-                    .borrow_mut()
-                    .assign(&name.lexeme, evaluated_value.clone(), name.line)?;
-            }
-            Depth::Resolved(distance) => {
-                self.environment
-                    .borrow_mut()
-                    .assign_at(distance, &name.lexeme, evaluated_value.clone(), name.line)?; // Ensure variable exists
-            }
-        }
-
-        // Return the assigned value
-        Ok(evaluated_value)
+    fn visit_assign(&mut self, name: &Token, value: &Expr, depth: &Depth) -> InterpreterResult<Value> {
+        self.assign_variable(name, value, *depth)
     }
 
-    fn logic_or(&mut self, left: &Expr, right: &Expr) -> InterpreterResult<Value> {
+    fn visit_logical_or(&mut self, left: &Expr, right: &Expr) -> InterpreterResult<Value> {
         // Evaluate the left expression
-        let left_value = self.evaluate(left)?;
+        let left_value = self.visit_expression(left)?;
 
         // If the left value is truthy, return it, because now we know at least one operand is truthy
         if Self::is_truthy(&left_value) {
@@ -426,13 +407,13 @@ impl Interpreter {
         }
         // Now evaluate and return the right expression
         else {
-            self.evaluate(right)
+            self.visit_expression(right)
         }
     }
 
-    fn logic_and(&mut self, left: &Expr, right: &Expr) -> InterpreterResult<Value> {
+    fn visit_logical_and(&mut self, left: &Expr, right: &Expr) -> InterpreterResult<Value> {
         // Evaluate the left expression
-        let left_value = self.evaluate(left)?;
+        let left_value = self.visit_expression(left)?;
 
         // If the left value is falsy, return it, because now we know at least one operand is falsy
         if !Self::is_truthy(&left_value) {
@@ -440,13 +421,13 @@ impl Interpreter {
         }
         // Now evaluate and return the right expression
         else {
-            self.evaluate(right)
+            self.visit_expression(right)
         }
     }
 
-    fn call_expr(&mut self, callee: &Expr, paren: &Token, arguments: &Vec<Expr>) -> InterpreterResult<Value> {
+    fn visit_call(&mut self, callee: &Expr, paren: &Token, arguments: &Vec<Expr>) -> InterpreterResult<Value> {
         // Evaluate the callee expression to get the function to call (usually an identifier)
-        let Value::Callable(function) = self.evaluate(callee)? else {
+        let Value::Callable(function) = self.visit_expression(callee)? else {
             // Not a callable
             return Self::error(paren, "Can only call functions and classes.");
         };
@@ -454,7 +435,7 @@ impl Interpreter {
         // Evaluate each argument expression
         let mut arg_values = Vec::new();
         for arg_expr in arguments {
-            let arg_value = self.evaluate(arg_expr)?;
+            let arg_value = self.visit_expression(arg_expr)?;
             arg_values.push(arg_value);
         }
 
@@ -474,7 +455,7 @@ impl Interpreter {
         Ok(function.call(self, arg_values)?)
     }
 
-    fn lambda_expression(&mut self, params: &Vec<Token>, body: &Vec<Statement>) -> InterpreterResult<Value> {
+    fn visit_lambda(&mut self, params: &Vec<Token>, body: &Vec<Statement>) -> InterpreterResult<Value> {
         // Create a Function representing the lambda
         let lambda_function = Function::new(
             "<lambda>".to_string(),
@@ -489,7 +470,7 @@ impl Interpreter {
     }
 
     fn visit_get(&mut self, object: &Expr, name: &Token) -> InterpreterResult<Value> {
-        let object_value = self.evaluate(object)?;
+        let object_value = self.visit_expression(object)?;
 
         if let Value::Instance(instance) = object_value {
             Ok(instance.get(name)?)
