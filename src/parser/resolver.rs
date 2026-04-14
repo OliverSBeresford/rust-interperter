@@ -279,7 +279,7 @@ impl<'a> Resolver<'a> {
         for (index, scope) in self.scopes.iter().rev().enumerate() {
             // If found, inform the interpreter of the variable's depth
             if self.is_declared(&name.lexeme, scope)? {
-                self.interpreter.resolve(expression, self.scopes.len() - 1 - index);
+                self.interpreter.resolve(expression, self.scopes.len() - (index + 1));
             }
         }
 
