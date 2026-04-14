@@ -214,12 +214,8 @@ impl Interpreter {
             Statement::Print { expression } => self.execute_print(expression),
             Statement::Var { name, initializer } => self.execute_var_statement(name, initializer),
             // Execute a block statement in a new enclosed environment
-            Statement::Block { statements } => {
-                self.execute_block(&statements, Environment::new(Some(self.environment.clone())))
-            }
-            Statement::If { condition, then_branch, else_branch } => {
-                self.execute_if_statement(condition, then_branch, else_branch)
-            }
+            Statement::Block { statements } => self.execute_block(&statements, Environment::new(Some(self.environment.clone()))),
+            Statement::If { condition, then_branch, else_branch } => self.execute_if_statement(condition, then_branch, else_branch),
             Statement::While { condition, body } => self.execute_while_statement(condition, body),
             Statement::Function { .. } => self.execute_function_statement(statement), // Declare function
             Statement::Return { keyword, value } => self.execute_return_statement(keyword, value),
