@@ -302,7 +302,7 @@ impl VisitorMutable<Output> for Resolver {
         Ok(())
     }
 
-    fn visit_get(&mut self, object: &mut Expr, name: &mut Token) -> Output {
+    fn visit_get(&mut self, object: &mut Expr, _name: &mut Token) -> Output {
         self.visit_expression(object)?;
 
         Ok(())
