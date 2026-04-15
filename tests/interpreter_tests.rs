@@ -16,8 +16,8 @@ fn parse_stmts(input: &str) -> (Interpreter, Vec<Statement>) {
     let tokens = scan(input);
     let mut parser = Parser::new(tokens.tokens);
     let mut statements = parser.parse();
-    let mut interpreter = Interpreter::new();
-    let mut resolver = Resolver::new(&mut interpreter);
+    let interpreter = Interpreter::new();
+    let mut resolver = Resolver::new();
     resolver.resolve_statements(&mut statements);
     (interpreter, statements)
 }

@@ -97,7 +97,7 @@ fn main() {
             // Create an interpreter and execute the statements
             let mut interpreter = Interpreter::new();
 
-            let mut resolver = Resolver::new(&mut interpreter);
+            let mut resolver = Resolver::new();
             resolver.resolve_statements(&mut statements);
 
             interpreter.interpret(&statements);

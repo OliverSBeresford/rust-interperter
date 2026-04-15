@@ -5,6 +5,8 @@ use crate::Statement;
 use crate::Expr;
 use crate::Token;
 use crate::ParseError;
+use crate::ast::Depth;
+use crate::ast::VisitorMutable;
 
 /// Type alias for a scope lookup table (maps variable names to defined status)
 pub type Lookup = RefCell<HashMap<String, bool>>;
@@ -17,17 +19,15 @@ enum FunctionType {
     Function,
 }
 
-pub struct Resolver<'a> {
-    interpreter: &'a mut Interpreter,
+pub struct Resolver {
     scopes: Vec<Lookup>,
     current_function: FunctionType,
 }
 
-impl<'a> Resolver<'a> {
+impl Resolver {
     /// Create a new Resolver with a reference to the interpreter
-    pub fn new(interpreter: &'a mut Interpreter) -> Self {
+    pub fn new() -> Self {
         Resolver {
-            interpreter,
             scopes: Vec::new(),
             current_function: FunctionType::None,
         }
@@ -39,248 +39,25 @@ impl<'a> Resolver<'a> {
         return Err(ParseError { line: token.line, message: message.to_string() })
     }
 
-    /// Resolve a statement by matching its type and resolving accordingly
-    pub fn resolve(&mut self, statement: &mut Statement) -> Output {
-        match statement {
-            Statement::Expression { expression } => self.resolve_expression(expression),
-            Statement::Print { expression } => self.resolve_print_statement(expression),
-            Statement::Var { name, initializer } => self.resolve_var_statement(name, initializer),
-            // Execute a block statement in a new enclosed environment
-            Statement::Block { statements } => self.resolve_block(statements),
-            Statement::If { condition, then_branch, else_branch } => {
-                self.resolve_if_statement(condition, then_branch, else_branch)
-            }
-            Statement::While { condition, body } => self.resolve_while_statement(condition, body),
-            Statement::Function { name, params, body } => self.resolve_function_statement(name, params, body), // Declare function
-            Statement::Return { value, keyword } => self.resolve_return_statement(value, keyword),
-            Statement::Class { name, methods } => self.resolve_class_statement(name, methods),
-        }
-    }
-
-    /// Resolve an expression by matching its type and resolving accordingly
-    pub fn resolve_expression(&mut self, expression: &mut Expr) -> Output {
-        match expression {
-            Expr::Binary { left, right, .. } => self.resolve_binary_expr(left, right),
-            Expr::Literal { .. } => Ok(()),
-            Expr::Grouping { expression } => self.resolve_grouping_expr(expression),
-            Expr::Unary { right, .. } => self.resolve_unary_expr(right),
-            // Handle variable expressions
-            Expr::Variable { .. } => self.resolve_variable_expr(expression),
-            Expr::Assign { .. } => self.resolve_assign_expr(expression),
-            Expr::LogicOr { left, right } => self.resolve_logic_expr(left, right),
-            Expr::LogicAnd { left, right } => self.resolve_logic_expr(left, right),
-            Expr::Call { callee, arguments , ..} => self.resolve_call_expr(callee, arguments),
-            Expr::Get { object, .. } => self.resolve_expression(object),
-            Expr::Lambda { .. } => Ok(()),
-        }
-    }
-
     /// Resolve a list of statements by resolving each statement in order
     pub fn resolve_statements(&mut self, statements: &mut Vec<Statement>) {
         // Resolve each statement in the list
         for statement in statements {
-            if let Err(parse_error) = self.resolve(statement) {
+            if let Err(parse_error) = self.visit_statement(statement) {
                 eprintln!("{}", parse_error);
                 std::process::exit(65);
             }
         }
     }
 
-    /// Resolve a block statement by creating a new scope for its statements
-    fn resolve_block(&mut self, statements: &mut Vec<Statement>) -> Output {
-        self.begin_scope()?;
-
-        // Resolve each statement in the block in the new scope
-        for statement in statements {
-            self.resolve(statement)?;
-        }
-
-        self.end_scope()?;
-
-        Ok(())
-    }
-
-    /// Resolve a variable declaration statement by declaring, resolving initializer, and defining the variable
-    fn resolve_var_statement(&mut self, name: &mut Token, initializer: &mut Option<Expr>) -> Output {
-        // Exists, but undefined
-        self.declare(name)?;
-
-        // Resolve the initializer expression if it exists
-        if initializer.is_some() {
-            self.resolve_expression(initializer.as_mut().unwrap())?;
-        }
-
-        self.define(name)?;
-        Ok(())
-    }
-
-    /// Resolve an if statement by resolving its condition and branches
-    fn resolve_if_statement(&mut self, condition: &mut Expr, then_branch: &mut Statement, else_branch: &mut Option<Box<Statement>>) -> Output {
-        self.resolve_expression(condition)?;
-        self.resolve(then_branch)?;
-        if else_branch.is_some() {
-            self.resolve(else_branch.as_mut().unwrap())?;
-        }
-
-        Ok(())
-    }
-
-    /// Resolve a print statement by resolving its expression
-    fn resolve_print_statement(&mut self, expression: &mut Expr) -> Output {
-        self.resolve_expression(expression)?;
-
-        Ok(())
-    }
-
-    /// Resolve a return statement by resolving its return value (if any)
-    fn resolve_return_statement(&mut self, value: &mut Option<Expr>, keyword: &Token) -> Output {
-        // Error if return used outside of function
-        if self.current_function == FunctionType::None {
-            return Self::error(keyword, "Can't return from top-level code");
-        }
-        
-        if value.is_some() {
-            self.resolve_expression(value.as_mut().unwrap())?;
-        }
-
-        Ok(())
-    }
-
-    /// Resolve a while statement by resolving its condition and body
-    fn resolve_while_statement(&mut self, condition: &mut Expr, body: &mut Statement) -> Output {
-        self.resolve_expression(condition)?;
-        self.resolve(body)?;
-
-        return Ok(())
-    }
-
-    /// Resolve a function statement by declaring its name and resolving its parameters and body
-    fn resolve_function_statement(&mut self, name: &mut Token, params: &mut Vec<Token>, body: &mut Vec<Statement>) -> Output {
-        // Declare the function name
-        self.declare(name)?;
-        self.define(name)?;
-
-        self.resolve_function(params, body, FunctionType::Function)?;
-
-        Ok(())
-    }
-
-    /// Resolve a function by creating a new scope for its parameters and body
-    fn resolve_function(&mut self, params: &mut Vec<Token>, body: &mut Vec<Statement>, function_type: FunctionType) -> Output {
-        // Keep track of the enclosing function type
-        let enclosing_function = self.current_function;
-        self.current_function = function_type;
-        
-        // Begin a new scope for the function body
-        self.begin_scope()?;
-
-        // Bind variables for each of the parameters
-        for param in params {
-            self.declare(param)?;
-            self.define(param)?;
-        }
-        
-        // Resolve the function body in its own scope
-        self.resolve_block(body)?;
-        
-        // End the function scope
-        self.end_scope()?;
-
-        // Restore the previous function type
-        self.current_function = enclosing_function;
-
-        Ok(())
-    }
-
-    fn resolve_class_statement(&mut self, name: &mut Token, methods: &mut Vec<Statement>) -> Output {
-        // Declare the class name
-        self.declare(name)?;
-        self.define(name)?;
-
-        Ok(())
-    }
-
-    /// Resolve an assignment expression ("a" = "b") by resolving the assigned value and the variable being assigned
-    fn resolve_assign_expr(&mut self, expression: &mut Expr) -> Output {
-         let (name, value) = match expression {
-            Expr::Assign { name, value, .. } => (name.clone(), value),
-            _ => return Ok(()),
-        };
-
-        // Resolve assigned value in case it contains references to other variables
-        self.resolve_expression(value)?;
-        // Resolve the variable that is being assigned
-        self.resolve_local(expression, &name)?;
-
-        Ok(())
-    }
-
-    /// Resolve a variable expression (like "my_variable") by determining its scope depth
-    fn resolve_variable_expr(&mut self, expression: &mut Expr) -> Output {
-        let name = match expression {
-            Expr::Variable { name, .. } => name.clone(),
-            _ => return Ok(()),
-        };
-
-        // (Check if scopes are empty to avoid error) If variable used inside its own declaration, error
-        if !self.scopes.is_empty() && self.get(&name, self.get_top()?)? == Some(false) {
-            return Self::error(&name, "Can't read local variable in its own initializer" );
-        }
-
-        self.resolve_local(expression, &name)?;
-        return Ok(());
-    }
-
-    /// Resolve a binary expression by resolving its left and right operands
-    fn resolve_binary_expr(&mut self, left: &mut Expr, right: &mut Expr) -> Output {
-        self.resolve_expression(left)?;
-        self.resolve_expression(right)?;
-
-        Ok(())
-    }
-
-    /// Resolve a call expression by resolving its callee and argument expressions
-    fn resolve_call_expr(&mut self, callee: &mut Expr, arguments: &mut Vec<Expr>) -> Output {
-        // Resolve the callee expression
-        self.resolve_expression(callee)?;
-
-        // Resolve each argument expression
-        for argument in arguments {
-            self.resolve_expression(argument)?;
-        }
-
-        Ok(())
-    }
-
-    /// Resolve a grouping expression by resolving the inner expression
-    fn resolve_grouping_expr(&mut self, expression: &mut Expr) -> Output {
-        self.resolve_expression(expression)?;
-
-        Ok(())
-    }
-
-    /// Resolve a logical expression by resolving its left and right operands
-    fn resolve_logic_expr(&mut self, left: &mut Expr, right: &mut Expr) -> Output {
-        self.resolve_expression(left)?;
-        self.resolve_expression(right)?;
-
-        Ok(())
-    }
-
-    /// Resolve a unary expression by resolving its operand
-    fn resolve_unary_expr(&mut self, right: &mut Expr) -> Output {
-        self.resolve_expression(right)?;
-
-        Ok(())
-    }
-
     /// Resolve a local variable by determining its scope depth
-    fn resolve_local(&mut self, expression: &mut Expr, name: &Token) -> Output {
+    fn resolve_local(&mut self, name: &Token, depth: &mut Depth) -> Output {
         // Look for the variable in each scope, starting from the innermost
         for (index, scope) in self.scopes.iter().rev().enumerate() {
             // If found, inform the interpreter of the variable's depth
             if self.is_declared(&name.lexeme, scope)? {
-                self.interpreter.resolve(expression, self.scopes.len() - (index + 1));
+                *depth = Depth::Resolved(self.scopes.len() - (index + 1));
+                dbg!("Resolved variable '{}' at depth {}", &name.lexeme, *depth);
             }
         }
 
@@ -343,5 +120,213 @@ impl<'a> Resolver<'a> {
         current_scope.borrow_mut().insert(name.lexeme.to_string(), true);
 
         Ok(())
+    }
+
+    /// Resolve a function by creating a new scope for its parameters and body
+    fn resolve_function(&mut self, params: &mut Vec<Token>, body: &mut Vec<Statement>, function_type: FunctionType) -> Output {
+        // Keep track of the enclosing function type
+        let enclosing_function = self.current_function;
+        self.current_function = function_type;
+        
+        // Begin a new scope for the function body
+        self.begin_scope()?;
+
+        // Bind variables for each of the parameters
+        for param in params {
+            self.declare(param)?;
+            self.define(param)?;
+        }
+        
+        // Resolve the function body in its own scope
+        self.visit_block_statement(body)?;
+        
+        // End the function scope
+        self.end_scope()?;
+
+        // Restore the previous function type
+        self.current_function = enclosing_function;
+
+        Ok(())
+    }
+}
+
+impl VisitorMutable<Output> for Resolver {
+    /// Resolve a block statement by creating a new scope for its statements
+    fn visit_block_statement(&mut self, statements: &mut [Statement]) -> Output {
+        self.begin_scope()?;
+
+        // Resolve each statement in the block in the new scope
+        for statement in statements {
+            self.visit_statement(statement)?;
+        }
+
+        self.end_scope()?;
+
+        Ok(())
+    }
+
+    /// Resolve a variable declaration statement by declaring, resolving initializer, and defining the variable
+    fn visit_var_statement(&mut self, name: &mut Token, initializer: &mut Option<Expr>) -> Output {
+        // Exists, but undefined
+        self.declare(name)?;
+
+        // Resolve the initializer expression if it exists
+        if initializer.is_some() {
+            self.visit_expression(initializer.as_mut().unwrap())?;
+        }
+
+        self.define(name)?;
+        Ok(())
+    }
+
+    /// Resolve an if statement by resolving its condition and branches
+    fn visit_if_statement(&mut self, condition: &mut Expr, then_branch: &mut Statement, else_branch: &mut Option<Box<Statement>>) -> Output {
+        self.visit_expression(condition)?;
+        self.visit_statement(then_branch)?;
+        if else_branch.is_some() {
+            self.visit_statement(else_branch.as_mut().unwrap())?;
+        }
+
+        Ok(())
+    }
+
+    /// Resolve a print statement by resolving its expression
+    fn visit_print_statement(&mut self, expression: &mut Expr) -> Output {
+        self.visit_expression(expression)?;
+
+        Ok(())
+    }
+
+    /// Resolve a return statement by resolving its return value (if any)
+    fn visit_return_statement(&mut self, keyword: &mut Token, value: &mut Option<Expr>, ) -> Output {
+        // Error if return used outside of function
+        if self.current_function == FunctionType::None {
+            return Self::error(keyword, "Can't return from top-level code");
+        }
+        
+        if value.is_some() {
+            self.visit_expression(value.as_mut().unwrap())?;
+        }
+
+        Ok(())
+    }
+
+    /// Resolve a while statement by resolving its condition and body
+    fn visit_while_statement(&mut self, condition: &mut Expr, body: &mut Statement) -> Output {
+        self.visit_expression(condition)?;
+        self.visit_statement(body)?;
+
+        return Ok(())
+    }
+
+    /// Resolve a function statement by declaring its name and resolving its parameters and body
+    fn visit_function_statement(&mut self, statement: &mut Statement) -> Output {
+        // Declare the function name
+        if let Statement::Function { name, params, body, .. } = statement {
+             self.declare(name)?;
+             self.define(name)?;
+
+             self.resolve_function(params, body, FunctionType::Function)?;
+        }
+        Ok(())
+    }
+
+    /// Resolve an assignment expression ("a" = "b") by resolving the assigned value and the variable being assigned
+    fn visit_assign(&mut self, name: &mut Token, value: &mut Expr, depth: &mut Depth) -> Output {
+        // Resolve assigned value in case it contains references to other variables
+        self.visit_expression(value)?;
+        // Resolve the variable that is being assigned
+        self.resolve_local(name, depth)?;
+
+        Ok(())
+    }
+
+    /// Resolve a variable expression (like "my_variable") by determining its scope depth
+    fn visit_variable(&mut self, name: &mut Token, depth: &mut Depth) -> Output {
+        // (Check if scopes are empty to avoid error) If variable used inside its own declaration, error
+        if !self.scopes.is_empty() && self.get(&name, self.get_top()?)? == Some(false) {
+            return Self::error(&name, "Can't read local variable in its own initializer" );
+        }
+
+        self.resolve_local(name, depth)?;
+        return Ok(());
+    }
+
+    /// Resolve a binary expression by resolving its left and right operands
+    fn visit_binary(&mut self, left: &mut Expr, _operator: &mut Token, right: &mut Expr) -> Output {
+        self.visit_expression(left)?;
+        self.visit_expression(right)?;
+
+        Ok(())
+    }
+
+    /// Resolve a call expression by resolving its callee and argument expressions
+    fn visit_call(&mut self, callee: &mut Expr, _paren: &mut Token, arguments: &mut Vec<Expr>) -> Output {
+        // Resolve the callee expression
+        self.visit_expression(callee)?;
+
+        // Resolve each argument expression
+        for argument in arguments {
+            self.visit_expression(argument)?;
+        }
+
+        Ok(())
+    }
+
+    /// Resolve a grouping expression by resolving the inner expression
+    fn visit_grouping(&mut self, expression: &mut Expr) -> Output {
+        self.visit_expression(expression)?;
+
+        Ok(())
+    }
+
+    /// Resolve a logical expression by resolving its left and right operands
+    fn visit_logical_and(&mut self, left: &mut Expr, right: &mut Expr) -> Output {
+        self.visit_expression(left)?;
+        self.visit_expression(right)?;
+
+        Ok(())
+    }
+
+    fn visit_logical_or(&mut self, left: &mut Expr, right: &mut Expr) -> Output {
+        self.visit_expression(left)?;
+        self.visit_expression(right)?;
+
+        Ok(())
+    }
+
+    /// Resolve a unary expression by resolving its operand
+    fn visit_unary(&mut self, _operator: &mut Token, right: &mut Expr) -> Output {
+        self.visit_expression(right)?;
+
+        Ok(())
+    }
+
+    fn visit_get(&mut self, object: &mut Expr, name: &mut Token) -> Output {
+        self.visit_expression(object)?;
+
+        Ok(())
+    }
+
+    fn visit_lambda(&mut self, params: &mut Vec<Token>, body: &mut Vec<Statement>) -> Output {
+        self.resolve_function(params, body, FunctionType::Function)?;
+
+        Ok(())
+    }
+
+    fn visit_literal(&mut self, _value: &mut Token) -> Output {
+        Ok(())
+    }
+
+    fn visit_class_statement(&mut self, name: &mut Token, methods: &mut [Statement]) -> Output {
+        // Declare the class name
+        self.declare(name)?;
+        self.define(name)?;
+
+        Ok(())
+    }
+
+    fn visit_expression_statement(&mut self, expression: &mut Expr) -> Output {
+        self.visit_expression(expression)
     }
 }
