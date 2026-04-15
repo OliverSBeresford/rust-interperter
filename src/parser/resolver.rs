@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::cell::RefCell;
-use crate::Interpreter;
 use crate::Statement;
 use crate::Expr;
 use crate::Token;
