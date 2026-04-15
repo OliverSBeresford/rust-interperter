@@ -6,4 +6,4 @@ pub mod visitor;
 pub use expr::{Expr, Depth};
 pub use printer::AstPrinter;
 pub use statement::Statement;
-pub use visitor::Visitor;
+pub use visitor::{Visitor, VisitorMutable};
