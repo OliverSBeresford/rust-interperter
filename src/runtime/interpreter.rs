@@ -223,7 +223,7 @@ impl Visitor<InterpreterResult<Value>> for Interpreter {
         Ok(Value::Nil)
     }
 
-    fn visit_return_statement(&mut self, keyword: &Token, value: &Option<Expr>) -> InterpreterResult<Value> {
+    fn visit_return_statement(&mut self, _keyword: &Token, value: &Option<Expr>) -> InterpreterResult<Value> {
         // Evaluate the return value expression if it exists, otherwise use nil
         let return_value = if let Some(value_expr) = value {
             self.visit_expression(value_expr)?
