@@ -51,7 +51,8 @@ fn main() {
             // Print the AST using the visit method
             match expression {
                 Ok(expr) => {
-                    AstPrinter.print(&expr);
+                    let mut printer = AstPrinter;
+                    printer.print_expression(&expr);
                 }
                 Err(error) => {
                     eprintln!("{}", error);
