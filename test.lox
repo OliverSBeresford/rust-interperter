@@ -1,9 +1,5 @@
-var a = "global";
-{
-    fun showA() {
-        print a;
-    }
-    showA();
-    var a = "block";
-    showA();
-}
+class Bagel {}
+var bagel = Bagel();
+bagel.property = "Hello World!";
+print bagel.property; // Prints "Hello World!"
+print Bagel; // Prints "Bagel class".
