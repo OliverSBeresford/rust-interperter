@@ -317,7 +317,7 @@ impl VisitorMutable<Output> for Resolver {
         Ok(())
     }
 
-    fn visit_class_statement(&mut self, name: &mut Token, methods: &mut [Statement]) -> Output {
+    fn visit_class_statement(&mut self, name: &mut Token, _methods: &mut [Statement]) -> Output {
         // Declare the class name
         self.declare(name)?;
         self.define(name)?;
