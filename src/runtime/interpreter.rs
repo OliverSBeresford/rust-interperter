@@ -26,7 +26,7 @@ impl fmt::Display for Value {
             Value::Bool(b) => format!("{}", b),
             Value::Nil => "nil".to_string(),
             Value::Callable(func) => format!("{}", func.to_string()),
-            Value::Instance(instance) => format!("<instance of {}>", instance.class.name()),
+            Value::Instance(instance) => format!("<instance of {}>", instance.borrow().class.name()),
         };
         write!(f, "{}", out)
     }
@@ -473,9 +473,21 @@ impl Visitor<InterpreterResult<Value>> for Interpreter {
         let object_value = self.visit_expression(object)?;
 
         if let Value::Instance(instance) = object_value {
-            Ok(instance.get(name)?)
+            Ok(instance.borrow().get(name)?)
         } else {
             Self::error(name, "Only instances have properties.")
+        }
+    }
+
+    fn visit_set(&mut self, object: &Expr, name: &Token, value: &Expr) -> InterpreterResult<Value> {
+        let object_value = self.visit_expression(object)?;
+
+        if let Value::Instance(instance) = object_value {
+            let value_to_set = self.visit_expression(value)?;
+            instance.borrow_mut().set(name, value_to_set.clone())?;
+            Ok(value_to_set)
+        } else {
+            Self::error(name, "Only instances have fields.")
         }
     }
 }

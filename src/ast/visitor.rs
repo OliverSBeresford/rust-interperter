@@ -16,7 +16,8 @@ pub trait Visitor<T> {
     fn visit_call(&mut self, callee: &Expr, paren: &Token, arguments: &Vec<Expr>) -> T;
     fn visit_lambda(&mut self, params: &Vec<Token>, body: &Vec<Statement>) -> T;
     fn visit_get(&mut self, object: &Expr, name: &Token) -> T;
-
+    fn visit_set(&mut self, object: &Expr, name: &Token, value: &Expr) -> T;
+    
     // Statement visitor methods
     fn visit_expression_statement(&mut self, expression: &Expr) -> T;
     fn visit_print_statement(&mut self, expression: &Expr) -> T;
@@ -41,6 +42,7 @@ pub trait Visitor<T> {
             Expr::Call { callee, arguments , paren} => self.visit_call(callee, paren, arguments),
             Expr::Lambda { params, body } => self.visit_lambda(params, body),
             Expr::Get { object, name } => self.visit_get(object, name),
+            Expr::Set { object, name, value } => self.visit_set(object, name, value),
         }
     }
 
@@ -72,6 +74,7 @@ pub trait VisitorMutable<T> {
     fn visit_call(&mut self, callee: &mut Expr, paren: &mut Token, arguments: &mut Vec<Expr>) -> T;
     fn visit_lambda(&mut self, params: &mut Vec<Token>, body: &mut Vec<Statement>) -> T;
     fn visit_get(&mut self, object: &mut Expr, name: &mut Token) -> T;
+    fn visit_set(&mut self, object: &mut Expr, name: &mut Token, value: &mut Expr) -> T;
 
     // Statement visitor methods
     fn visit_expression_statement(&mut self, expression: &mut Expr) -> T;
@@ -97,6 +100,7 @@ pub trait VisitorMutable<T> {
             Expr::Call { callee, arguments , paren} => self.visit_call(callee, paren, arguments),
             Expr::Lambda { params, body } => self.visit_lambda(params, body),
             Expr::Get { object, name } => self.visit_get(object, name),
+            Expr::Set { object, name, value } => self.visit_set(object, name, value),
         }
     }
 

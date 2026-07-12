@@ -28,4 +28,10 @@ impl Instance {
             format!("Undefined property '{}'.", name.lexeme),
         )))
     }
+
+    pub fn set(&mut self, name: &Token, value: Value) -> Result<(), ControlFlow> {
+        // Set the property in the instance's fields
+        self.fields.insert(name.lexeme.clone(), value);
+        Ok(())
+    }
 }

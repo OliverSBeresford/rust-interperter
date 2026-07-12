@@ -4,6 +4,7 @@ use crate::runtime::control_flow::ControlFlow;
 use crate::runtime::interpreter::Interpreter;
 use crate::runtime::value::Value;
 use std::rc::Rc;
+use std::cell::RefCell;
 use crate::runtime::instance::Instance;
 
 pub type FunctionResult<T> = Result<T, ControlFlow>;
@@ -26,7 +27,7 @@ impl Callable for Class {
     }
 
     fn call(self: Rc<Self>, _interpreter: &mut Interpreter, _args: Vec<Value>) -> FunctionResult<Value> {
-        return Ok(Value::Instance(Rc::new(Instance::new(self))));
+        return Ok(Value::Instance(Rc::new(RefCell::new(Instance::new(self)))));
     }
 
     fn to_string(&self) -> String {

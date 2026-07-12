@@ -457,6 +457,14 @@ impl Parser {
                     depth: Depth::Unresolved, // Depth will be resolved later
                 });
             }
+            // If the left-hand side is a property access, create a property set expression
+            else if let Expr::Get { object, name } = expr {
+                return Ok(Expr::Set {
+                    object,
+                    name,
+                    value: Box::new(value),
+                });
+            }
 
             return Self::error(&equals, "Invalid assignment target.");
         }

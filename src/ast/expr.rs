@@ -52,6 +52,11 @@ pub enum Expr {
         object: Box<Expr>,
         name: Token,
     },
+    Set {
+        object: Box<Expr>,
+        name: Token,
+        value: Box<Expr>,
+    },
     Lambda {
         params: Vec<Token>,
         body: Vec<Statement>,

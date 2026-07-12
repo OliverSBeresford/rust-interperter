@@ -307,6 +307,13 @@ impl VisitorMutable<Output> for Resolver {
         Ok(())
     }
 
+    fn visit_set(&mut self, object: &mut Expr, _name: &mut Token, value: &mut Expr) -> Output {
+        self.visit_expression(object)?;
+        self.visit_expression(value)?;
+
+        Ok(())
+    }
+
     fn visit_lambda(&mut self, params: &mut Vec<Token>, body: &mut Vec<Statement>) -> Output {
         self.resolve_function(params, body, FunctionType::Function)?;
 
