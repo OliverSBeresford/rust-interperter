@@ -60,7 +60,7 @@ impl Resolver {
     /// Resolve a local variable by determining its scope depth
     fn resolve_local(&mut self, name: &Token, depth: &mut Depth) -> Output {
         // Look for the variable in each scope, starting from the innermost
-        for (index, scope) in self.scopes.iter().rev().enumerate() {
+        for (index, scope) in self.scopes.iter().enumerate().rev() {
             // If found, update the variable's depth
             if self.is_declared(&name.lexeme, scope)? {
                 *depth = Depth::Resolved(self.scopes.len() - (index + 1));
@@ -144,7 +144,9 @@ impl Resolver {
         }
         
         // Resolve the function body in its own scope
-        self.visit_block_statement(body)?;
+        for statement in body {
+            self.visit_statement(statement)?;
+        }
         
         // End the function scope
         self.end_scope()?;
