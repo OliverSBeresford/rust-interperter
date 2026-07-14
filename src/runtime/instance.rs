@@ -22,7 +22,7 @@ impl Instance {
         if let Some(value) = self.fields.get(&name.lexeme) {
             return Ok(value.clone());
         }
-        // If not found, return a default value (e.g., Nil)
+        // If not found, return an error indicating that the property is undefined
         Err(ControlFlow::RuntimeError(RuntimeError::new(
             name.line,
             format!("Undefined property '{}'.", name.lexeme),
