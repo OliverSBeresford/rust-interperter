@@ -53,10 +53,9 @@ impl Resolver {
     fn resolve_local(&mut self, name: &Token, depth: &mut Depth) -> Output {
         // Look for the variable in each scope, starting from the innermost
         for (index, scope) in self.scopes.iter().rev().enumerate() {
-            // If found, inform the interpreter of the variable's depth
+            // If found, update the variable's depth
             if self.is_declared(&name.lexeme, scope)? {
                 *depth = Depth::Resolved(self.scopes.len() - (index + 1));
-                dbg!("Resolved variable '{}' at depth {}", &name.lexeme, *depth);
             }
         }
 
