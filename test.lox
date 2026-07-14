@@ -1,11 +1,14 @@
 class Bagel {
+    init(flavor) {
+        this.flavor = flavor;
+    }
+
     eat() {
-        print "The " + this.property + " bagel is delicious!";
-        this.property = "Eaten";
+        print "The " + this.flavor + " bagel is delicious!";
+        this.flavor = "Eaten";
     }
 }
-var bagel = Bagel();
-bagel.property = "Hello World!";
-print bagel.property; // Prints "Hello World!"
-bagel.eat();
-bagel.eat(); // Prints "The Eaten bagel is delicious!"
+
+var myBagel = Bagel("sesame");
+myBagel.eat();
+myBagel.eat();

@@ -14,14 +14,15 @@ pub type FunctionResult<T> = Result<T, ControlFlow>;
 #[derive(Debug, Clone)]
 pub struct Function {
     name: String,
-    params: Vec<String>,
-    body: Vec<Statement>,
+    pub params: Vec<String>,
+    pub body: Vec<Statement>,
     pub closure: EnvRef,
+    is_initializer: bool,
 }
 
 impl Function {
     // Create a Function from a Statement::Function
-    pub fn from_statement(stmt: &Statement, closure: EnvRef) -> FunctionResult<Self> {
+    pub fn from_statement(stmt: &Statement, closure: EnvRef, is_initializer: bool) -> FunctionResult<Self> {
         if let Statement::Function { name, params, body } = stmt {
             Ok(Function {
                 name: name.lexeme.clone(),
@@ -29,6 +30,7 @@ impl Function {
                 // This clones the body statements, which is inefficient but acceptable for this context (see other branch for version without clone)
                 body: body.clone(),
                 closure,
+                is_initializer,
             })
         } else {
             // This should not happen if used correctly (even if the user makes a mistake)
@@ -39,8 +41,8 @@ impl Function {
         }
     }
 
-    pub fn new(name: String, params: Vec<String>, body: Vec<Statement>, closure: EnvRef) -> Self {
-        Function { name, params, body, closure }
+    pub fn new(name: String, params: Vec<String>, body: Vec<Statement>, closure: EnvRef, is_initializer: bool) -> Self {
+        Function { name, params, body, closure, is_initializer }
     }
 
     pub fn bind(&self, instance: Rc<RefCell<Instance>>) -> Self {
@@ -54,7 +56,16 @@ impl Function {
             params: self.params.clone(),
             body: self.body.clone(),
             closure: bound_closure,
+            is_initializer: self.is_initializer,
         }
+    }
+
+    fn get_instance_from_closure(&self) -> FunctionResult<Value> {
+        Ok(self.closure
+            .borrow()
+            .get("this", 0)
+            .expect("Expected 'this' to be defined in the closure.")
+            .clone())
     }
 }
 
@@ -78,11 +89,22 @@ impl Callable for Function {
             Ok(_) => {}
             Err(ControlFlow::Return(return_value)) => {
                 interpreter.environment = previous_environment;
+                
+                // If the function is an initializer, return the instance bound to "this" in the closure; otherwise, return the return value
+                if self.is_initializer {
+                    return self.get_instance_from_closure();
+                }
+
                 return Ok(return_value);
             }
             Err(ControlFlow::RuntimeError(runtime_error)) => {
                 return Err(ControlFlow::RuntimeError(runtime_error));
             }
+        }
+
+        // If the function is an initializer, return the instance bound to "this" in the closure; otherwise, return Nil
+        if self.is_initializer {
+            return self.get_instance_from_closure();
         }
 
         Ok(Value::Nil)

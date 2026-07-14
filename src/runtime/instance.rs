@@ -26,7 +26,7 @@ impl Instance {
         }
 
         // If not found in fields, check if it's a method in the class
-        if let Some(method) = self.class.methods.get(&name.lexeme) {
+        if let Some(method) = self.class.find_method(&name.lexeme) {
             // Bind the method to the instance and return it as a callable value
             let bound_method: Function = method.bind(instance.clone());
 

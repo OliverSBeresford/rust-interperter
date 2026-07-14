@@ -16,6 +16,8 @@ pub type Output = Result<(), ParseError>;
 enum FunctionType {
     None,
     Function,
+    Initializer,
+    Method,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -210,6 +212,8 @@ impl VisitorMutable<Output> for Resolver {
         // Error if return used outside of function
         if self.current_function == FunctionType::None {
             return Self::error(keyword, "Can't return from top-level code");
+        } else if self.current_function == FunctionType::Initializer && value.is_some() {
+            return Self::error(keyword, "Can't return a value from an initializer");
         }
         
         if value.is_some() {
@@ -357,8 +361,15 @@ impl VisitorMutable<Output> for Resolver {
         self.scopes.last_mut().unwrap().borrow_mut().insert("this".to_string(), true);
 
         for method in methods {
-            if let Statement::Function { name: _method_name, params, body, .. } = method {
-                self.resolve_function(params, body, FunctionType::Function)?;
+            if let Statement::Function { name: method_name, params, body, .. } = method {
+                // Determine the function type based on whether the method is an initializer or a regular method
+                let function_type = if method_name.lexeme == "init" {
+                    FunctionType::Initializer
+                } else {
+                    FunctionType::Method
+                };
+
+                self.resolve_function(params, body, function_type)?;
             }
         }
 

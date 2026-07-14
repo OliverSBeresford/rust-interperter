@@ -205,7 +205,7 @@ impl Visitor<InterpreterResult<Value>> for Interpreter {
     // Declare and define a function
     fn visit_function_statement(&mut self, statement: &Statement) -> InterpreterResult<Value> {
         // Create a Function from the statement
-        let function: Function = Function::from_statement(statement, self.environment.clone())?;
+        let function: Function = Function::from_statement(statement, self.environment.clone(), false)?;
 
         // Define the function in the current environment
         self.environment
@@ -219,7 +219,7 @@ impl Visitor<InterpreterResult<Value>> for Interpreter {
         // Create a HashMap to hold the methods of the class by iterating over the provided method statements and converting them into Functions
         let methods: HashMap<String, Rc<Function>> = methods.iter().filter_map(|method| {
             if let Statement::Function { name: method_name, .. } = method {
-                Some((method_name.lexeme.clone(), Rc::new(Function::from_statement(method, self.environment.clone()).ok()?)))
+                Some((method_name.lexeme.clone(), Rc::new(Function::from_statement(method, self.environment.clone(), name.lexeme == "init").ok()?)))
             } else {
                 None
             }
@@ -473,6 +473,7 @@ impl Visitor<InterpreterResult<Value>> for Interpreter {
             // This clones the body statements, which is inefficient but acceptable for this context
             body.clone(),
             self.environment.clone(),
+            false, // Lambdas are not initializers
         );
 
         // Return the lambda as a callable Value

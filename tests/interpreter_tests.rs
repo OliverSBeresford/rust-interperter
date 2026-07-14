@@ -83,7 +83,7 @@ fn function_call_returns_sum() {
     interpreter.environment = env.clone();
 
     // Build function from statement
-    let func = Function::from_statement(&stmt, env.clone()).unwrap_or_else(|_| panic!("function build error"));
+    let func = Function::from_statement(&stmt, env.clone(), false).unwrap_or_else(|_| panic!("function build error"));
     
     // Call the function with args
     let result = Rc::new(func);
