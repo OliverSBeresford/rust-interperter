@@ -18,7 +18,7 @@ impl Instance {
     }
 
     pub fn get(&self, name: &Token) -> Result<Value, ControlFlow> {
-        // First, check if the property exists in the instance's fields
+        // First, check if the field exists in the instance's fields
         if let Some(value) = self.fields.get(&name.lexeme) {
             return Ok(value.clone());
         }
