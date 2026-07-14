@@ -1,4 +1,6 @@
 use std::rc::Rc;
+use std::cell::RefCell;
+use crate::runtime::function::Function;
 use std::collections::HashMap;
 use crate::runtime::class::Class;
 use crate::runtime::value::Value;
@@ -17,7 +19,7 @@ impl Instance {
         Instance { class, fields: HashMap::new() }
     }
 
-    pub fn get(&self, name: &Token) -> Result<Value, ControlFlow> {
+    pub fn get(&self, instance: Rc<RefCell<Instance>>, name: &Token) -> Result<Value, ControlFlow> {
         // First, check if the field exists in the instance's fields
         if let Some(value) = self.fields.get(&name.lexeme) {
             return Ok(value.clone());
@@ -25,8 +27,11 @@ impl Instance {
 
         // If not found in fields, check if it's a method in the class
         if let Some(method) = self.class.methods.get(&name.lexeme) {
+            // Bind the method to the instance and return it as a callable value
+            let bound_method: Function = method.bind(instance.clone());
+
             // Return the method as a callable value
-            return Ok(Value::Callable(method.clone()));
+            return Ok(Value::Callable(Rc::new(bound_method)));
         }
 
         // If not found, return an error indicating that the property is undefined

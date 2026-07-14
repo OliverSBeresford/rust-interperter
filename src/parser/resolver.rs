@@ -12,15 +12,22 @@ pub type Lookup = RefCell<HashMap<String, bool>>;
 pub type Output = Result<(), ParseError>;
 
 /// Enum to track the type of function currently being resolved
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum FunctionType {
     None,
     Function,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ClassType {
+    Class,
+    None,
+}
+
 pub struct Resolver {
     scopes: Vec<Lookup>,
     current_function: FunctionType,
+    current_class: ClassType,
 }
 
 impl Resolver {
@@ -29,6 +36,7 @@ impl Resolver {
         Resolver {
             scopes: Vec::new(),
             current_function: FunctionType::None,
+            current_class: ClassType::None,
         }
     }
 
@@ -313,6 +321,16 @@ impl VisitorMutable<Output> for Resolver {
         Ok(())
     }
 
+    fn visit_this(&mut self, keyword: &mut Token, depth: &mut Depth) -> Output {
+        if self.current_class == ClassType::None {
+            return Self::error(keyword, "Can't use 'this' outside of a class");
+        }
+
+        self.resolve_local(keyword, depth)?;
+
+        Ok(())
+    }
+
     fn visit_lambda(&mut self, params: &mut Vec<Token>, body: &mut Vec<Statement>) -> Output {
         self.resolve_function(params, body, FunctionType::Function)?;
 
@@ -324,15 +342,28 @@ impl VisitorMutable<Output> for Resolver {
     }
 
     fn visit_class_statement(&mut self, name: &mut Token, methods: &mut [Statement]) -> Output {
+        // Keep track of the enclosing class type
+        let enclosing_class: ClassType = self.current_class;
+        self.current_class = ClassType::Class;
+
         // Declare the class name
         self.declare(name)?;
         self.define(name)?;
+
+        // Begin a new scope for the class methods and define "this" in that scope
+        self.begin_scope()?;
+        self.scopes.last_mut().unwrap().borrow_mut().insert("this".to_string(), true);
 
         for method in methods {
             if let Statement::Function { name: _method_name, params, body, .. } = method {
                 self.resolve_function(params, body, FunctionType::Function)?;
             }
         }
+
+        self.end_scope()?;
+
+        // Restore the previous class type
+        self.current_class = enclosing_class;
 
         Ok(())
     }

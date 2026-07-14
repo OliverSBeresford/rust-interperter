@@ -84,6 +84,10 @@ impl Visitor<Output> for AstPrinter {
         format!("(set {} {} {})", self.visit_expression(object), name.lexeme, self.visit_expression(value))
     }
 
+    fn visit_this(&mut self, keyword: &Token, _depth: &Depth) -> Output {
+        format!("(this {})", keyword.lexeme)
+    }
+
     fn visit_expression_statement(&mut self, expression: &Expr) -> Output {
         format!("(expr {})", self.visit_expression(expression))
     }

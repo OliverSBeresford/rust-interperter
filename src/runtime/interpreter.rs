@@ -479,11 +479,15 @@ impl Visitor<InterpreterResult<Value>> for Interpreter {
         Ok(Value::Callable(Rc::new(lambda_function)))
     }
 
+    fn visit_this(&mut self, keyword: &Token, depth: &Depth) -> InterpreterResult<Value> {
+        self.lookup_variable(keyword, *depth)
+    }
+
     fn visit_get(&mut self, object: &Expr, name: &Token) -> InterpreterResult<Value> {
         let object_value = self.visit_expression(object)?;
 
         if let Value::Instance(instance) = object_value {
-            Ok(instance.borrow().get(name)?)
+            Ok(instance.borrow().get(instance.clone(), name)?)
         } else {
             Self::error(name, "Only instances have fields.")
         }

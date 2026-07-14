@@ -1,9 +1,11 @@
 class Bagel {
     eat() {
-        print "Nom nom nom!";
+        print "The " + this.property + " bagel is delicious!";
+        this.property = "Eaten";
     }
 }
 var bagel = Bagel();
 bagel.property = "Hello World!";
 print bagel.property; // Prints "Hello World!"
 bagel.eat();
+bagel.eat(); // Prints "The Eaten bagel is delicious!"

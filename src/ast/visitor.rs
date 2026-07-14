@@ -17,7 +17,8 @@ pub trait Visitor<T> {
     fn visit_lambda(&mut self, params: &Vec<Token>, body: &Vec<Statement>) -> T;
     fn visit_get(&mut self, object: &Expr, name: &Token) -> T;
     fn visit_set(&mut self, object: &Expr, name: &Token, value: &Expr) -> T;
-    
+    fn visit_this(&mut self, keyword: &Token, depth: &Depth) -> T;
+
     // Statement visitor methods
     fn visit_expression_statement(&mut self, expression: &Expr) -> T;
     fn visit_print_statement(&mut self, expression: &Expr) -> T;
@@ -43,6 +44,7 @@ pub trait Visitor<T> {
             Expr::Lambda { params, body } => self.visit_lambda(params, body),
             Expr::Get { object, name } => self.visit_get(object, name),
             Expr::Set { object, name, value } => self.visit_set(object, name, value),
+            Expr::This { keyword, depth } => self.visit_this(keyword, depth),
         }
     }
 
@@ -75,7 +77,7 @@ pub trait VisitorMutable<T> {
     fn visit_lambda(&mut self, params: &mut Vec<Token>, body: &mut Vec<Statement>) -> T;
     fn visit_get(&mut self, object: &mut Expr, name: &mut Token) -> T;
     fn visit_set(&mut self, object: &mut Expr, name: &mut Token, value: &mut Expr) -> T;
-
+    fn visit_this(&mut self, keyword: &mut Token, depth: &mut Depth) -> T;
     // Statement visitor methods
     fn visit_expression_statement(&mut self, expression: &mut Expr) -> T;
     fn visit_print_statement(&mut self, expression: &mut Expr) -> T;
@@ -101,6 +103,7 @@ pub trait VisitorMutable<T> {
             Expr::Lambda { params, body } => self.visit_lambda(params, body),
             Expr::Get { object, name } => self.visit_get(object, name),
             Expr::Set { object, name, value } => self.visit_set(object, name, value),
+            Expr::This { keyword, depth } => self.visit_this(keyword, depth),
         }
     }
 

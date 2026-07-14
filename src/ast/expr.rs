@@ -57,6 +57,10 @@ pub enum Expr {
         name: Token,
         value: Box<Expr>,
     },
+    This {
+        keyword: Token,
+        depth: Depth,
+    },
     Lambda {
         params: Vec<Token>,
         body: Vec<Statement>,

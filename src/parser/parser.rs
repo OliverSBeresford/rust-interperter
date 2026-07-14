@@ -671,6 +671,7 @@ impl Parser {
                 Ok(Expr::Literal { value: current_token })
             }
             TokenType::Keyword(Keyword::Fun) => self.lambda_expression(),
+            TokenType::Keyword(Keyword::This) => Ok(Expr::This { keyword: current_token, depth: Depth::Unresolved }),
             TokenType::Identifier => Ok(Expr::Variable { name: current_token, depth: Depth::Unresolved }),
             _ => Self::error(&current_token, "Expect expression."),
         }

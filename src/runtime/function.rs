@@ -3,18 +3,20 @@ use crate::runtime::callable::Callable;
 use crate::runtime::control_flow::ControlFlow;
 use crate::runtime::environment::{EnvRef, Environment};
 use crate::runtime::interpreter::Interpreter;
+use crate::runtime::instance::Instance;
 use crate::runtime::RuntimeError;
 use crate::runtime::value::Value;
+use std::cell::RefCell;
 use std::rc::Rc;
 
 pub type FunctionResult<T> = Result<T, ControlFlow>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Function {
     name: String,
     params: Vec<String>,
     body: Vec<Statement>,
-    closure: EnvRef,
+    pub closure: EnvRef,
 }
 
 impl Function {
@@ -39,6 +41,20 @@ impl Function {
 
     pub fn new(name: String, params: Vec<String>, body: Vec<Statement>, closure: EnvRef) -> Self {
         Function { name, params, body, closure }
+    }
+
+    pub fn bind(&self, instance: Rc<RefCell<Instance>>) -> Self {
+        let bound_closure: EnvRef = Environment::new(Some(self.closure.clone()));
+        bound_closure
+            .borrow_mut()
+            .define("this".to_string(), Value::Instance(instance));
+
+        Function {
+            name: self.name.clone(),
+            params: self.params.clone(),
+            body: self.body.clone(),
+            closure: bound_closure,
+        }
     }
 }
 
