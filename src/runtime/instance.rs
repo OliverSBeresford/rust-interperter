@@ -22,6 +22,13 @@ impl Instance {
         if let Some(value) = self.fields.get(&name.lexeme) {
             return Ok(value.clone());
         }
+
+        // If not found in fields, check if it's a method in the class
+        if let Some(method) = self.class.methods.get(&name.lexeme) {
+            // Return the method as a callable value
+            return Ok(Value::Callable(method.clone()));
+        }
+
         // If not found, return an error indicating that the property is undefined
         Err(ControlFlow::RuntimeError(RuntimeError::new(
             name.line,

@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
 use crate::ast::{Depth, Expr, Statement, Visitor};
@@ -215,10 +216,19 @@ impl Visitor<InterpreterResult<Value>> for Interpreter {
     }
 
     fn visit_class_statement(&mut self, name: &Token, methods: &[Statement]) -> InterpreterResult<Value> {
+        // Create a HashMap to hold the methods of the class by iterating over the provided method statements and converting them into Functions
+        let methods: HashMap<String, Rc<Function>> = methods.iter().filter_map(|method| {
+            if let Statement::Function { name: method_name, .. } = method {
+                Some((method_name.lexeme.clone(), Rc::new(Function::from_statement(method, self.environment.clone()).ok()?)))
+            } else {
+                None
+            }
+        }).collect();
+
         // Define the class in the current environment
         self.environment
             .borrow_mut()
-            .define(name.lexeme.to_string(), Value::Callable(Rc::new(Class { name: name.lexeme.clone(), methods: methods.to_vec() })));
+            .define(name.lexeme.to_string(), Value::Callable(Rc::new(Class { name: name.lexeme.clone(), methods: methods })));
 
         Ok(Value::Nil)
     }
@@ -475,7 +485,7 @@ impl Visitor<InterpreterResult<Value>> for Interpreter {
         if let Value::Instance(instance) = object_value {
             Ok(instance.borrow().get(name)?)
         } else {
-            Self::error(name, "Only instances have properties.")
+            Self::error(name, "Only instances have fields.")
         }
     }
 

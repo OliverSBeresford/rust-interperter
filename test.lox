@@ -1,5 +1,9 @@
-class Bagel {}
+class Bagel {
+    eat() {
+        print "Nom nom nom!";
+    }
+}
 var bagel = Bagel();
 bagel.property = "Hello World!";
 print bagel.property; // Prints "Hello World!"
-print Bagel; // Prints "Bagel class".
+bagel.eat();

@@ -324,10 +324,16 @@ impl VisitorMutable<Output> for Resolver {
         Ok(())
     }
 
-    fn visit_class_statement(&mut self, name: &mut Token, _methods: &mut [Statement]) -> Output {
+    fn visit_class_statement(&mut self, name: &mut Token, methods: &mut [Statement]) -> Output {
         // Declare the class name
         self.declare(name)?;
         self.define(name)?;
+
+        for method in methods {
+            if let Statement::Function { name: _method_name, params, body, .. } = method {
+                self.resolve_function(params, body, FunctionType::Function)?;
+            }
+        }
 
         Ok(())
     }

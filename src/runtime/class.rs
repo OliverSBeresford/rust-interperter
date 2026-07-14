@@ -1,8 +1,9 @@
-use crate::ast::statement::Statement;
 use crate::runtime::callable::Callable;
 use crate::runtime::control_flow::ControlFlow;
 use crate::runtime::interpreter::Interpreter;
 use crate::runtime::value::Value;
+use std::collections::HashMap;
+use crate::runtime::function::Function;
 use std::rc::Rc;
 use std::cell::RefCell;
 use crate::runtime::instance::Instance;
@@ -12,11 +13,11 @@ pub type FunctionResult<T> = Result<T, ControlFlow>;
 #[derive(Debug)]
 pub struct Class {
     pub name: String,
-    pub methods: Vec<Statement>,
+    pub methods: HashMap<String, Rc<Function>>,
 }
 
 impl Class {
-    pub fn new(name: String, methods: Vec<Statement>) -> Self {
+    pub fn new(name: String, methods: HashMap<String, Rc<Function>>) -> Self {
         Class { name, methods }
     }
 }
