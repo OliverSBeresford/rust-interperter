@@ -110,7 +110,7 @@ impl Interpreter {
     }
 
     // Interpret (run) a series of statements (can be used for the whole program or a block)
-    pub fn interpret(&mut self, statements: &[Statement]) {
+    pub fn interpret(&mut self, statements: Vec<Statement>) {
         for statement in statements {
             if let Err(ControlFlow::RuntimeError(runtime_error)) = self.visit_statement(&statement) {
                 eprintln!("{}", runtime_error);

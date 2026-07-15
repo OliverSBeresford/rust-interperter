@@ -100,7 +100,7 @@ fn main() {
             let mut resolver = Resolver::new();
             resolver.resolve_statements(&mut statements);
 
-            interpreter.interpret(&statements);
+            interpreter.interpret(statements);
         }
         // Debug: Print the tokens and parsed statements AST
         "dbg" => {
