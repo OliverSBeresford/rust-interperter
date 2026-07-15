@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::ast::{Expr, Statement, Depth};
+use crate::ast::{Expr, Statement};
 use crate::lexer::token::Keyword::{False, Nil, True};
 use crate::lexer::token::{Keyword, Literal, Token, TokenType};
 use crate::parser::error::ParseError;
@@ -456,7 +456,6 @@ impl Parser {
                 return Ok(Expr::Assign {
                     name,
                     value: Box::new(value),
-                    depth: Depth::Unresolved, // Depth will be resolved later
                 });
             }
             // If the left-hand side is a property access, create a property set expression
@@ -673,8 +672,8 @@ impl Parser {
                 Ok(Expr::Literal { value: current_token })
             }
             TokenType::Keyword(Keyword::Fun) => self.lambda_expression(),
-            TokenType::Keyword(Keyword::This) => Ok(Expr::This { keyword: current_token, depth: Depth::Unresolved }),
-            TokenType::Identifier => Ok(Expr::Variable { name: current_token, depth: Depth::Unresolved }),
+            TokenType::Keyword(Keyword::This) => Ok(Expr::This { keyword: current_token }),
+            TokenType::Identifier => Ok(Expr::Variable { name: current_token }),
             _ => Self::error(&current_token, "Expect expression."),
         }
     }

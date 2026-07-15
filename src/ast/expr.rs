@@ -2,18 +2,11 @@ use crate::ast::statement::Statement;
 use crate::lexer::token::Token;
 use std::rc::Rc;
 
-#[derive(Debug, Copy, Clone)]
-pub enum Depth {
-    Unresolved,
-    Resolved(usize),
-}
-
 #[derive(Debug)]
 pub enum Expr {
     Assign {
         name: Token,
         value: Box<Expr>,
-        depth: Depth,
     },
     LogicOr {
         left: Box<Expr>,
@@ -42,7 +35,6 @@ pub enum Expr {
     },
     Variable {
         name: Token,
-        depth: Depth,
     },
     Call {
         callee: Box<Expr>,
@@ -60,7 +52,6 @@ pub enum Expr {
     },
     This {
         keyword: Token,
-        depth: Depth,
     },
     Lambda {
         params: Vec<Token>,

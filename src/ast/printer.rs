@@ -1,7 +1,6 @@
 use crate::ast::Visitor;
 use crate::{Expr};
 use crate::Token;
-use crate::ast::Depth;
 use crate::ast::Statement;
 use std::rc::Rc;
 
@@ -41,11 +40,11 @@ impl Visitor<Output> for AstPrinter {
         format!("({} {})", operator.lexeme, self.visit_expression(right))
     }
 
-    fn visit_variable(&mut self, name: &Token, _depth: &Depth) -> Output {
+    fn visit_variable(&mut self, name: &Token) -> Output {
         format!("(var {})", name.lexeme)
     }
 
-    fn visit_assign(&mut self, name: &Token, value: &Expr, _depth: &Depth) -> Output {
+    fn visit_assign(&mut self, name: &Token, value: &Expr) -> Output {
         format!("(assign {} {})", name.lexeme, self.visit_expression(value))
     }
 
@@ -85,7 +84,7 @@ impl Visitor<Output> for AstPrinter {
         format!("(set {} {} {})", self.visit_expression(object), name.lexeme, self.visit_expression(value))
     }
 
-    fn visit_this(&mut self, keyword: &Token, _depth: &Depth) -> Output {
+    fn visit_this(&mut self, keyword: &Token) -> Output {
         format!("(this {})", keyword.lexeme)
     }
 

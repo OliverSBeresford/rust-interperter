@@ -2,7 +2,8 @@ use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
 use crate::Resolver;
-use crate::ast::{Depth, Expr, Statement, Visitor};
+use crate::parser::Depth;
+use crate::ast::{Expr, Statement, Visitor};
 use crate::lexer::token::{Literal, Token, TokenType};
 use crate::runtime::clock::Clock;
 use crate::runtime::control_flow::ControlFlow;
@@ -121,12 +122,12 @@ impl Interpreter {
         }
     }
 
-    fn assign_variable(&mut self, name: &Token, value_expr: &Expr, depth: Depth) -> InterpreterResult<Value> {
+    fn assign_variable(&mut self, name: &Token, value_expr: &Expr) -> InterpreterResult<Value> {
         // Evaluate the value expression
         let evaluated_value = self.visit_expression(value_expr)?;
 
         // Assign the value to the variable at the correct depth
-        match depth {
+        match self.resolver.get_depth(name) {
             Depth::Unresolved => {
                 self.globals
                     .borrow_mut()
@@ -394,12 +395,12 @@ impl Visitor<InterpreterResult<Value>> for Interpreter {
         }
     }
 
-    fn visit_variable(&mut self, name: &Token, depth: &Depth) -> InterpreterResult<Value> {
+    fn visit_variable(&mut self, name: &Token) -> InterpreterResult<Value> {
         self.lookup_variable(name)
     }
 
-    fn visit_assign(&mut self, name: &Token, value: &Expr, depth: &Depth) -> InterpreterResult<Value> {
-        self.assign_variable(name, value, *depth)
+    fn visit_assign(&mut self, name: &Token, value: &Expr) -> InterpreterResult<Value> {
+        self.assign_variable(name, value)
     }
 
     fn visit_logical_or(&mut self, left: &Expr, right: &Expr) -> InterpreterResult<Value> {
@@ -475,7 +476,7 @@ impl Visitor<InterpreterResult<Value>> for Interpreter {
         Ok(Value::Callable(Rc::new(lambda_function)))
     }
 
-    fn visit_this(&mut self, keyword: &Token, depth: &Depth) -> InterpreterResult<Value> {
+    fn visit_this(&mut self, keyword: &Token) -> InterpreterResult<Value> {
         self.lookup_variable(keyword)
     }
 

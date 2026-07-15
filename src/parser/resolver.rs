@@ -5,7 +5,6 @@ use crate::Statement;
 use crate::Expr;
 use crate::Token;
 use crate::ParseError;
-use crate::ast::Depth;
 use crate::ast::Visitor;
 
 /// Type alias for a scope lookup table (maps variable names to defined status)
@@ -25,6 +24,12 @@ enum FunctionType {
 enum ClassType {
     Class,
     None,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum Depth {
+    Unresolved,
+    Resolved(usize),
 }
 
 pub struct Resolver {
@@ -73,6 +78,7 @@ impl Resolver {
             // If found, update the variable's depth
             if self.is_declared(&name.lexeme, scope)? {
                 self.locals.insert(name, Depth::Resolved(self.scopes.len() - (index + 1)));
+                break;
             }
         }
 
@@ -251,7 +257,7 @@ impl Visitor<Output> for Resolver {
     }
 
     /// Resolve an assignment expression ("a" = "b") by resolving the assigned value and the variable being assigned
-    fn visit_assign(&mut self, name: &Token, value: &Expr, depth: &Depth) -> Output {
+    fn visit_assign(&mut self, name: &Token, value: &Expr) -> Output {
         // Resolve assigned value in case it contains references to other variables
         self.visit_expression(value)?;
         // Resolve the variable that is being assigned
@@ -261,7 +267,7 @@ impl Visitor<Output> for Resolver {
     }
 
     /// Resolve a variable expression (like "my_variable") by determining its scope depth
-    fn visit_variable(&mut self, name: &Token, depth: &Depth) -> Output {
+    fn visit_variable(&mut self, name: &Token) -> Output {
         // (Check if scopes are empty to avoid error) If variable used inside its own declaration, error
         if !self.scopes.is_empty() && self.get(&name, self.get_top()?)? == Some(false) {
             return Self::error(&name, "Can't read local variable in its own initializer" );
@@ -334,7 +340,7 @@ impl Visitor<Output> for Resolver {
         Ok(())
     }
 
-    fn visit_this(&mut self, keyword: &Token, depth: &Depth) -> Output {
+    fn visit_this(&mut self, keyword: &Token) -> Output {
         if self.current_class == ClassType::None {
             return Self::error(keyword, "Can't use 'this' outside of a class");
         }
