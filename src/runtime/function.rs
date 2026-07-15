@@ -15,15 +15,15 @@ pub type FunctionResult<T> = Result<T, ControlFlow>;
 pub struct Function {
     name: String,
     pub params: Vec<String>,
-    pub body: Vec<Statement>,
+    pub body: Vec<Rc<Statement>>,
     pub closure: EnvRef,
     is_initializer: bool,
 }
 
 impl Function {
     // Create a Function from a Statement::Function
-    pub fn from_statement(stmt: &Statement, closure: EnvRef, is_initializer: bool) -> FunctionResult<Self> {
-        if let Statement::Function { name, params, body } = stmt {
+    pub fn from_statement(stmt: Rc<Statement>, closure: EnvRef, is_initializer: bool) -> FunctionResult<Self> {
+        if let Statement::Function { name, params, body } = &*stmt {
             Ok(Function {
                 name: name.lexeme.clone(),
                 params: params.iter().map(|param| param.lexeme.clone()).collect(),
@@ -41,7 +41,7 @@ impl Function {
         }
     }
 
-    pub fn new(name: String, params: Vec<String>, body: Vec<Statement>, closure: EnvRef, is_initializer: bool) -> Self {
+    pub fn new(name: String, params: Vec<String>, body: Vec<Rc<Statement>>, closure: EnvRef, is_initializer: bool) -> Self {
         Function { name, params, body, closure, is_initializer }
     }
 
@@ -85,7 +85,7 @@ impl Callable for Function {
         }
 
         // Execute the function body in the new environment, handling return values via ControlFlow
-        match interpreter.execute_block(&self.body, environment) {
+        match interpreter.execute_block(self.body.clone(), environment) {
             Ok(_) => {}
             Err(ControlFlow::Return(return_value)) => {
                 interpreter.environment = previous_environment;

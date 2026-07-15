@@ -9,17 +9,18 @@ fn parse_expr(input: &str) -> (Interpreter, Expr) {
     let tokens = scan(input);
     let mut parser = Parser::new(tokens.tokens);
     let expr = parser.expression().unwrap_or_else(|e| panic!("parse error: {}", e));
-    (Interpreter::new(), expr)
+    (Interpreter::new(Resolver::new()), expr)
 }
 
 fn parse_stmts(input: &str) -> (Interpreter, Vec<Statement>) {
     let tokens = scan(input);
     let mut parser = Parser::new(tokens.tokens);
-    let mut statements = parser.parse();
-    let interpreter = Interpreter::new();
+    let statements = parser.parse();
+    let statement_refs: Vec<Rc<Statement>> = statements.into_iter().map(|stmt| Rc::new(stmt)).collect();
+    let interpreter = Interpreter::new(Resolver::new());
     let mut resolver = Resolver::new();
-    resolver.resolve_statements(&mut statements);
-    (interpreter, statements)
+    resolver.resolve_statements(statement_refs.clone());
+    (interpreter, statement_refs.into_iter().map(|stmt| Rc::try_unwrap(stmt).unwrap_or_else(|_| panic!("failed to unwrap Rc"))).collect())
 }
 
 #[test]
@@ -83,7 +84,7 @@ fn function_call_returns_sum() {
     interpreter.environment = env.clone();
 
     // Build function from statement
-    let func = Function::from_statement(&stmt, env.clone(), false).unwrap_or_else(|_| panic!("function build error"));
+    let func = Function::from_statement(Rc::new(stmt), env.clone(), false).unwrap_or_else(|_| panic!("function build error"));
     
     // Call the function with args
     let result = Rc::new(func);

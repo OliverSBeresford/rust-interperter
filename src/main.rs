@@ -1,6 +1,8 @@
 use std::env;
 use std::fs;
 use std::io::{self, Write};
+use std::rc::Rc;
+use rust_interpreter::Statement;
 use rust_interpreter::parser::Resolver;
 use rust_interpreter::ast::visitor::Visitor;
 
@@ -73,7 +75,7 @@ fn main() {
             });
 
             // Create an interpreter and evaluate the expression
-            let mut interpreter = Interpreter::new();
+            let mut interpreter = Interpreter::new(Resolver::new());
             let result = interpreter.visit_expression(&expression).unwrap_or_else(|control_flow| {
                 if let ControlFlow::RuntimeError(runtime_error) = control_flow {
                     eprintln!("{}", runtime_error);
@@ -92,15 +94,16 @@ fn main() {
             
             // Create a parser and parse the tokens into statements
             let mut parser = Parser::new(tokens.tokens);
-            let mut statements = parser.parse();
-
-            // Create an interpreter and execute the statements
-            let mut interpreter = Interpreter::new();
+            let statements = parser.parse();
+            let statement_refs: Vec<Rc<Statement>> = statements.into_iter().map(|stmt| Rc::new(stmt)).collect();
 
             let mut resolver = Resolver::new();
-            resolver.resolve_statements(&mut statements);
+            resolver.resolve_statements(statement_refs.clone());
 
-            interpreter.interpret(statements);
+            // Create an interpreter and execute the statements
+            let mut interpreter = Interpreter::new(resolver);
+
+            interpreter.interpret(statement_refs);
         }
         // Debug: Print the tokens and parsed statements AST
         "dbg" => {

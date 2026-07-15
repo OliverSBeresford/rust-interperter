@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
+use crate::Resolver;
 use crate::ast::{Depth, Expr, Statement, Visitor};
 use crate::lexer::token::{Literal, Token, TokenType};
 use crate::runtime::clock::Clock;
@@ -36,14 +37,16 @@ impl fmt::Display for Value {
 pub struct Interpreter {
     pub globals: EnvRef,
     pub environment: EnvRef,
+    pub resolver: Resolver, // Maps expression IDs to their resolved depth
 }
 
 impl Interpreter {
-    pub fn new() -> Self {
+    pub fn new(resolver: Resolver) -> Self {
         let globals = Environment::new(None);
         let interpreter = Interpreter {
             globals: globals.clone(),
             environment: globals.clone(),
+            resolver,
         };
         // Define native functions in the global environment
         interpreter
@@ -85,15 +88,7 @@ impl Interpreter {
         }
     }
 
-    pub fn resolve(&mut self, expression: &mut Expr, depth: usize) {
-        if let Expr::Variable { depth: expr_depth, .. } = expression {
-            *expr_depth = Depth::Resolved(depth);
-        } else if let Expr::Assign { depth: expr_depth, .. } = expression {
-            *expr_depth = Depth::Resolved(depth);
-        }
-    }
-
-    pub fn execute_block(&mut self, statements: &[Statement], environment: EnvRef) -> InterpreterResult<Value> {
+    pub fn execute_block(&mut self, statements: Vec<Rc<Statement>>, environment: EnvRef) -> InterpreterResult<Value> {
         // Create a new environment enclosed by the current one
         let previous_environment = self.environment.clone();
         self.environment = environment;
@@ -110,17 +105,17 @@ impl Interpreter {
     }
 
     // Interpret (run) a series of statements (can be used for the whole program or a block)
-    pub fn interpret(&mut self, statements: Vec<Statement>) {
+    pub fn interpret(&mut self, statements: Vec<Rc<Statement>>) {
         for statement in statements {
-            if let Err(ControlFlow::RuntimeError(runtime_error)) = self.visit_statement(&statement) {
+            if let Err(ControlFlow::RuntimeError(runtime_error)) = self.visit_statement(statement) {
                 eprintln!("{}", runtime_error);
                 std::process::exit(70);
             }
         }
     }
 
-    fn lookup_variable(&mut self, name: &Token, depth: Depth) -> InterpreterResult<Value> {
-        match depth {
+    fn lookup_variable(&mut self, name: &Token) -> InterpreterResult<Value> {
+        match self.resolver.get_depth(name) {
             Depth::Unresolved => self.globals.borrow().get(&name.lexeme, name.line),
             Depth::Resolved(distance) => self.environment.borrow().get_at(distance, &name.lexeme, name.line),
         }
@@ -159,12 +154,12 @@ impl Visitor<InterpreterResult<Value>> for Interpreter {
         Ok(Value::Nil)
     }
 
-    fn visit_block_statement(&mut self, statements: &[Statement]) -> InterpreterResult<Value> {
+    fn visit_block_statement(&mut self, statements: Vec<Rc<Statement>>) -> InterpreterResult<Value> {
         // Execute the block in a new environment enclosed by the current one
         self.execute_block(statements, Environment::new(Some(self.environment.clone())))
     }
 
-    fn visit_if_statement(&mut self, condition: &Expr, then_branch: &Statement, else_branch: &Option<Box<Statement>>) -> InterpreterResult<Value> {
+    fn visit_if_statement(&mut self, condition: &Expr, then_branch: Rc<Statement>, else_branch: Option<Rc<Statement>>) -> InterpreterResult<Value> {
         let condition_value = self.visit_expression(condition)?;
 
         // Execute the then_branch if the condition is truthy, otherwise execute the else_branch if it exists
@@ -192,10 +187,10 @@ impl Visitor<InterpreterResult<Value>> for Interpreter {
         Ok(Value::Nil)
     }
 
-    fn visit_while_statement(&mut self, condition: &Expr, body: &Statement) -> InterpreterResult<Value> {
+    fn visit_while_statement(&mut self, condition: &Expr, body: Rc<Statement>) -> InterpreterResult<Value> {
         // Evaluate the condition and execute the body while the condition is truthy
         while Self::is_truthy(&self.visit_expression(condition)?) {
-            self.visit_statement(body)?;
+            self.visit_statement(body.clone())?;
         }
 
         // Doesn't return anything
@@ -203,9 +198,9 @@ impl Visitor<InterpreterResult<Value>> for Interpreter {
     }
 
     // Declare and define a function
-    fn visit_function_statement(&mut self, statement: &Statement) -> InterpreterResult<Value> {
+    fn visit_function_statement(&mut self, statement: Rc<Statement>) -> InterpreterResult<Value> {
         // Create a Function from the statement
-        let function: Function = Function::from_statement(statement, self.environment.clone(), false)?;
+        let function: Function = Function::from_statement(statement.clone(), self.environment.clone(), false)?;
 
         // Define the function in the current environment
         self.environment
@@ -215,11 +210,11 @@ impl Visitor<InterpreterResult<Value>> for Interpreter {
         Ok(Value::Nil)
     }
 
-    fn visit_class_statement(&mut self, name: &Token, methods: &[Statement]) -> InterpreterResult<Value> {
+    fn visit_class_statement(&mut self, name: &Token, methods: Vec<Rc<Statement>>) -> InterpreterResult<Value> {
         // Create a HashMap to hold the methods of the class by iterating over the provided method statements and converting them into Functions
         let methods: HashMap<String, Rc<Function>> = methods.iter().filter_map(|method| {
-            if let Statement::Function { name: method_name, .. } = method {
-                Some((method_name.lexeme.clone(), Rc::new(Function::from_statement(method, self.environment.clone(), name.lexeme == "init").ok()?)))
+            if let Statement::Function { name: method_name, .. } = &*method.clone() {
+                Some((method_name.lexeme.clone(), Rc::new(Function::from_statement(method.clone(), self.environment.clone(), name.lexeme == "init").ok()?)))
             } else {
                 None
             }
@@ -400,7 +395,7 @@ impl Visitor<InterpreterResult<Value>> for Interpreter {
     }
 
     fn visit_variable(&mut self, name: &Token, depth: &Depth) -> InterpreterResult<Value> {
-        self.lookup_variable(name, *depth)
+        self.lookup_variable(name)
     }
 
     fn visit_assign(&mut self, name: &Token, value: &Expr, depth: &Depth) -> InterpreterResult<Value> {
@@ -465,7 +460,7 @@ impl Visitor<InterpreterResult<Value>> for Interpreter {
         Ok(function.call(self, arg_values)?)
     }
 
-    fn visit_lambda(&mut self, params: &Vec<Token>, body: &Vec<Statement>) -> InterpreterResult<Value> {
+    fn visit_lambda(&mut self, params: &Vec<Token>, body: Vec<Rc<Statement>>) -> InterpreterResult<Value> {
         // Create a Function representing the lambda
         let lambda_function = Function::new(
             "<lambda>".to_string(),
@@ -481,7 +476,7 @@ impl Visitor<InterpreterResult<Value>> for Interpreter {
     }
 
     fn visit_this(&mut self, keyword: &Token, depth: &Depth) -> InterpreterResult<Value> {
-        self.lookup_variable(keyword, *depth)
+        self.lookup_variable(keyword)
     }
 
     fn visit_get(&mut self, object: &Expr, name: &Token) -> InterpreterResult<Value> {

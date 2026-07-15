@@ -3,6 +3,7 @@ use crate::{Expr};
 use crate::Token;
 use crate::ast::Depth;
 use crate::ast::Statement;
+use std::rc::Rc;
 
 type Output = String;
 
@@ -14,7 +15,7 @@ impl AstPrinter {
         println!("{}", self.visit_expression(expr));
     }
 
-    pub fn print_statement(&mut self, statement: &Statement) {
+    pub fn print_statement(&mut self, statement: Rc<Statement>) {
         println!("{}", self.visit_statement(statement));
     }
 
@@ -65,9 +66,9 @@ impl Visitor<Output> for AstPrinter {
         result
     }
 
-    fn visit_lambda(&mut self, params: &Vec<Token>, body: &Vec<Statement>) -> Output {
+    fn visit_lambda(&mut self, params: &Vec<Token>, body: Vec<Rc<Statement>>) -> Output {
         let param_list: Vec<String> = params.iter().map(|p| p.lexeme.clone()).collect();
-        let body_list: Vec<String> = body.iter().map(|s| self.visit_statement(s)).collect();
+        let body_list: Vec<String> = body.iter().map(|s| self.visit_statement(s.clone())).collect();
         let mut result = format!("(lambda ({})", param_list.join(" "));
         for statement in body_list {
             result.push_str(&format!(" {}", statement));
@@ -104,7 +105,7 @@ impl Visitor<Output> for AstPrinter {
         }
     }
 
-    fn visit_block_statement(&mut self, statements: &[Statement]) -> Output {
+    fn visit_block_statement(&mut self, statements: Vec<Rc<Statement>>) -> Output {
         let mut result = String::from("(block");
         for statement in statements {
             result.push_str(&format!(" {}", self.visit_statement(statement)));
@@ -113,7 +114,7 @@ impl Visitor<Output> for AstPrinter {
         result
     }
 
-    fn visit_if_statement(&mut self, condition: &Expr, then_branch: &Statement, else_branch: &Option<Box<Statement>>) -> Output {
+    fn visit_if_statement(&mut self, condition: &Expr, then_branch: Rc<Statement>, else_branch: Option<Rc<Statement>>) -> Output {
         let mut result = format!(
             "(if {} {}",
             self.visit_expression(condition),
@@ -128,18 +129,18 @@ impl Visitor<Output> for AstPrinter {
         result
     }
 
-    fn visit_while_statement(&mut self, condition: &Expr, body: &Statement) -> Output {
+    fn visit_while_statement(&mut self, condition: &Expr, body: Rc<Statement>) -> Output {
         format!("(while {} {})", self.visit_expression(condition), self.visit_statement(body))
     }
 
-    fn visit_function_statement(&mut self, statement: &Statement) -> Output {
-        match statement {
+    fn visit_function_statement(&mut self, statement: Rc<Statement>) -> Output {
+        match &*statement {
             Statement::Function { name, params, body } => {
                 let param_list: Vec<String> = params.iter().map(|p| p.lexeme.clone()).collect();
                 let mut result = format!("(fun {} ({})", name.lexeme, param_list.join(" "));
 
                 for stmt in body {
-                    result.push_str(&format!(" {}", self.visit_statement(stmt)));
+                    result.push_str(&format!(" {}", self.visit_statement(stmt.clone())));
                 }
 
                 result.push(')');
@@ -157,7 +158,7 @@ impl Visitor<Output> for AstPrinter {
         }
     }
 
-    fn visit_class_statement(&mut self, name: &Token, methods: &[Statement]) -> Output {
+    fn visit_class_statement(&mut self, name: &Token, methods: Vec<Rc<Statement>>) -> Output {
         let mut result = format!("(class {}", name.lexeme);
         for method in methods {
             result.push_str(&format!(" {}", self.visit_statement(method)));

@@ -1,14 +1,9 @@
-class Bagel {
-    init(flavor) {
-        this.flavor = flavor;
+var a = "global";
+{
+    fun showA() {
+        print a;
     }
-
-    eat() {
-        print "The " + this.flavor + " bagel is delicious!";
-        this.flavor = "Eaten";
-    }
+    showA();
+    var a = "block";
+    showA();
 }
-
-var myBagel = Bagel("sesame");
-myBagel.eat();
-myBagel.eat();

@@ -1,5 +1,6 @@
 use crate::ast::statement::Statement;
 use crate::lexer::token::Token;
+use std::rc::Rc;
 
 #[derive(Debug, Copy, Clone)]
 pub enum Depth {
@@ -7,7 +8,7 @@ pub enum Depth {
     Resolved(usize),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum Expr {
     Assign {
         name: Token,
@@ -63,6 +64,6 @@ pub enum Expr {
     },
     Lambda {
         params: Vec<Token>,
-        body: Vec<Statement>,
+        body: Vec<Rc<Statement>>,
     },
 }

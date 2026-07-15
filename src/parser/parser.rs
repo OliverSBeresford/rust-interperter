@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::ast::{Expr, Statement, Depth};
 use crate::lexer::token::Keyword::{False, Nil, True};
 use crate::lexer::token::{Keyword, Literal, Token, TokenType};
@@ -231,9 +233,9 @@ impl Parser {
         self.consume(TokenType::LeftBrace, "Expect '{' before class body.")?;
 
         // Parse the methods in the class
-        let mut methods: Vec<Statement> = Vec::new();
+        let mut methods: Vec<Rc<Statement>> = Vec::new();
         while !self.check(&[TokenType::RightBrace]) && self.current < self.tokens.len() - 1 {
-            methods.push(self.function_declaration("method")?);
+            methods.push(Rc::new(self.function_declaration("method")?));
         }
 
         // Consume the '}' token
@@ -290,12 +292,12 @@ impl Parser {
         }
 
         // Create a vector to hold the statements in the block
-        let mut statements: Vec<Statement> = Vec::new();
+        let mut statements: Vec<Rc<Statement>> = Vec::new();
 
         // Parse statements until we find a '}'
         while !self.check(&[TokenType::RightBrace]) && self.current < self.tokens.len() - 1 {
             let declaration = self.declaration()?;
-            statements.push(declaration);
+            statements.push(Rc::new(declaration));
         }
 
         // Consume the '}' token
@@ -317,19 +319,19 @@ impl Parser {
         let then_branch = self.statement()?;
 
         // Optional else branch
-        let else_branch: Option<Box<Statement>> = if self.check(&[TokenType::Keyword(Keyword::Else)]) {
+        let else_branch: Option<Rc<Statement>> = if self.check(&[TokenType::Keyword(Keyword::Else)]) {
             // Consume the 'else' keyword
             let _else_token = self.advance();
 
             // Parse the else branch statement
-            Some(Box::new(self.statement()?))
+            Some(Rc::new(self.statement()?))
         } else {
             None
         };
 
         Ok(Statement::If {
             condition,
-            then_branch: Box::new(then_branch),
+            then_branch: Rc::new(then_branch),
             else_branch,
         })
     }
@@ -346,7 +348,7 @@ impl Parser {
         // Parse the body statement (the thing that gets repeated)
         let body: Statement = self.statement()?;
 
-        Ok(Statement::While { condition, body: Box::new(body) })
+        Ok(Statement::While { condition, body: Rc::new(body) })
     }
 
     // This is not a new kind of statement, we are just desugaring a for loop into a while loop and some extra statements
@@ -399,9 +401,9 @@ impl Parser {
         if increment.is_some() {
             // Combine what's in the body with the increment expression
             body = Statement::Block {
-                statements: vec![body.into(), Statement::Expression {
+                statements: vec![Rc::new(body), Rc::new(Statement::Expression {
                     expression: increment.unwrap(),
-                }.into()],
+                })],
             };
         }
 
@@ -414,7 +416,7 @@ impl Parser {
         // If there is an initializer, add it as a statement before the while loop
         if initializer.is_some() {
             body = Statement::Block {
-                statements: vec![initializer.unwrap(), body],
+                statements: vec![Rc::new(initializer.unwrap()), Rc::new(body)],
             };
         }
 

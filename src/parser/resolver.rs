@@ -1,11 +1,12 @@
 use std::collections::HashMap;
 use std::cell::RefCell;
+use std::rc::Rc;
 use crate::Statement;
 use crate::Expr;
 use crate::Token;
 use crate::ParseError;
 use crate::ast::Depth;
-use crate::ast::VisitorMutable;
+use crate::ast::Visitor;
 
 /// Type alias for a scope lookup table (maps variable names to defined status)
 pub type Lookup = RefCell<HashMap<String, bool>>;
@@ -30,6 +31,7 @@ pub struct Resolver {
     scopes: Vec<Lookup>,
     current_function: FunctionType,
     current_class: ClassType,
+    pub locals: HashMap<*const Token, Depth>, // Maps expression IDs to their resolved depth
 }
 
 impl Resolver {
@@ -39,7 +41,12 @@ impl Resolver {
             scopes: Vec::new(),
             current_function: FunctionType::None,
             current_class: ClassType::None,
+            locals: HashMap::new(),
         }
+    }
+
+    pub fn get_depth(&self, token: &Token) -> Depth {
+        self.locals.get(&(token as *const Token)).cloned().unwrap_or(Depth::Unresolved)
     }
 
     /// Create and return a parse error with a message at a given token
@@ -49,7 +56,7 @@ impl Resolver {
     }
 
     /// Resolve a list of statements by resolving each statement in order
-    pub fn resolve_statements(&mut self, statements: &mut Vec<Statement>) {
+    pub fn resolve_statements(&mut self, statements: Vec<Rc<Statement>>) {
         // Resolve each statement in the list
         for statement in statements {
             if let Err(parse_error) = self.visit_statement(statement) {
@@ -60,12 +67,12 @@ impl Resolver {
     }
 
     /// Resolve a local variable by determining its scope depth
-    fn resolve_local(&mut self, name: &Token, depth: &mut Depth) -> Output {
+    fn resolve_local(&mut self, name: &Token) -> Output {
         // Look for the variable in each scope, starting from the innermost
         for (index, scope) in self.scopes.iter().enumerate().rev() {
             // If found, update the variable's depth
             if self.is_declared(&name.lexeme, scope)? {
-                *depth = Depth::Resolved(self.scopes.len() - (index + 1));
+                self.locals.insert(name, Depth::Resolved(self.scopes.len() - (index + 1)));
             }
         }
 
@@ -131,7 +138,7 @@ impl Resolver {
     }
 
     /// Resolve a function by creating a new scope for its parameters and body
-    fn resolve_function(&mut self, params: &mut Vec<Token>, body: &mut Vec<Statement>, function_type: FunctionType) -> Output {
+    fn resolve_function(&mut self, params: &Vec<Token>, body: Vec<Rc<Statement>>, function_type: FunctionType) -> Output {
         // Keep track of the enclosing function type
         let enclosing_function = self.current_function;
         self.current_function = function_type;
@@ -160,9 +167,9 @@ impl Resolver {
     }
 }
 
-impl VisitorMutable<Output> for Resolver {
+impl Visitor<Output> for Resolver {
     /// Resolve a block statement by creating a new scope for its statements
-    fn visit_block_statement(&mut self, statements: &mut [Statement]) -> Output {
+    fn visit_block_statement(&mut self, statements: Vec<Rc<Statement>>) -> Output {
         self.begin_scope()?;
 
         // Resolve each statement in the block in the new scope
@@ -176,13 +183,13 @@ impl VisitorMutable<Output> for Resolver {
     }
 
     /// Resolve a variable declaration statement by declaring, resolving initializer, and defining the variable
-    fn visit_var_statement(&mut self, name: &mut Token, initializer: &mut Option<Expr>) -> Output {
+    fn visit_var_statement(&mut self, name: &Token, initializer: &Option<Expr>) -> Output {
         // Exists, but undefined
         self.declare(name)?;
 
         // Resolve the initializer expression if it exists
         if initializer.is_some() {
-            self.visit_expression(initializer.as_mut().unwrap())?;
+            self.visit_expression(&initializer.as_ref().unwrap())?;
         }
 
         self.define(name)?;
@@ -190,25 +197,25 @@ impl VisitorMutable<Output> for Resolver {
     }
 
     /// Resolve an if statement by resolving its condition and branches
-    fn visit_if_statement(&mut self, condition: &mut Expr, then_branch: &mut Statement, else_branch: &mut Option<Box<Statement>>) -> Output {
+    fn visit_if_statement(&mut self, condition: &Expr, then_branch: Rc<Statement>, else_branch: Option<Rc<Statement>>) -> Output {
         self.visit_expression(condition)?;
         self.visit_statement(then_branch)?;
         if else_branch.is_some() {
-            self.visit_statement(else_branch.as_mut().unwrap())?;
+            self.visit_statement(else_branch.as_ref().unwrap().clone())?;
         }
 
         Ok(())
     }
 
     /// Resolve a print statement by resolving its expression
-    fn visit_print_statement(&mut self, expression: &mut Expr) -> Output {
+    fn visit_print_statement(&mut self, expression: &Expr) -> Output {
         self.visit_expression(expression)?;
 
         Ok(())
     }
 
     /// Resolve a return statement by resolving its return value (if any)
-    fn visit_return_statement(&mut self, keyword: &mut Token, value: &mut Option<Expr>, ) -> Output {
+    fn visit_return_statement(&mut self, keyword: &Token, value: &Option<Expr>, ) -> Output {
         // Error if return used outside of function
         if self.current_function == FunctionType::None {
             return Self::error(keyword, "Can't return from top-level code");
@@ -217,14 +224,14 @@ impl VisitorMutable<Output> for Resolver {
         }
         
         if value.is_some() {
-            self.visit_expression(value.as_mut().unwrap())?;
+            self.visit_expression(value.as_ref().unwrap())?;
         }
 
         Ok(())
     }
 
     /// Resolve a while statement by resolving its condition and body
-    fn visit_while_statement(&mut self, condition: &mut Expr, body: &mut Statement) -> Output {
+    fn visit_while_statement(&mut self, condition: &Expr, body: Rc<Statement>) -> Output {
         self.visit_expression(condition)?;
         self.visit_statement(body)?;
 
@@ -232,40 +239,40 @@ impl VisitorMutable<Output> for Resolver {
     }
 
     /// Resolve a function statement by declaring its name and resolving its parameters and body
-    fn visit_function_statement(&mut self, statement: &mut Statement) -> Output {
+    fn visit_function_statement(&mut self, statement: Rc<Statement>) -> Output {
         // Declare the function name
-        if let Statement::Function { name, params, body, .. } = statement {
-             self.declare(name)?;
-             self.define(name)?;
+        if let Statement::Function { name, params, body, .. } = &*statement {
+            self.declare(name)?;
+            self.define(name)?;
 
-             self.resolve_function(params, body, FunctionType::Function)?;
+            self.resolve_function(params, body.clone(), FunctionType::Function)?;
         }
         Ok(())
     }
 
     /// Resolve an assignment expression ("a" = "b") by resolving the assigned value and the variable being assigned
-    fn visit_assign(&mut self, name: &mut Token, value: &mut Expr, depth: &mut Depth) -> Output {
+    fn visit_assign(&mut self, name: &Token, value: &Expr, depth: &Depth) -> Output {
         // Resolve assigned value in case it contains references to other variables
         self.visit_expression(value)?;
         // Resolve the variable that is being assigned
-        self.resolve_local(name, depth)?;
+        self.resolve_local(name)?;
 
         Ok(())
     }
 
     /// Resolve a variable expression (like "my_variable") by determining its scope depth
-    fn visit_variable(&mut self, name: &mut Token, depth: &mut Depth) -> Output {
+    fn visit_variable(&mut self, name: &Token, depth: &Depth) -> Output {
         // (Check if scopes are empty to avoid error) If variable used inside its own declaration, error
         if !self.scopes.is_empty() && self.get(&name, self.get_top()?)? == Some(false) {
             return Self::error(&name, "Can't read local variable in its own initializer" );
         }
 
-        self.resolve_local(name, depth)?;
+        self.resolve_local(name)?;
         return Ok(());
     }
 
     /// Resolve a binary expression by resolving its left and right operands
-    fn visit_binary(&mut self, left: &mut Expr, _operator: &mut Token, right: &mut Expr) -> Output {
+    fn visit_binary(&mut self, left: &Expr, _operator: &Token, right: &Expr) -> Output {
         self.visit_expression(left)?;
         self.visit_expression(right)?;
 
@@ -273,7 +280,7 @@ impl VisitorMutable<Output> for Resolver {
     }
 
     /// Resolve a call expression by resolving its callee and argument expressions
-    fn visit_call(&mut self, callee: &mut Expr, _paren: &mut Token, arguments: &mut Vec<Expr>) -> Output {
+    fn visit_call(&mut self, callee: &Expr, _paren: &Token, arguments: &Vec<Expr>) -> Output {
         // Resolve the callee expression
         self.visit_expression(callee)?;
 
@@ -286,21 +293,21 @@ impl VisitorMutable<Output> for Resolver {
     }
 
     /// Resolve a grouping expression by resolving the inner expression
-    fn visit_grouping(&mut self, expression: &mut Expr) -> Output {
+    fn visit_grouping(&mut self, expression: &Expr) -> Output {
         self.visit_expression(expression)?;
 
         Ok(())
     }
 
     /// Resolve a logical expression by resolving its left and right operands
-    fn visit_logical_and(&mut self, left: &mut Expr, right: &mut Expr) -> Output {
+    fn visit_logical_and(&mut self, left: &Expr, right: &Expr) -> Output {
         self.visit_expression(left)?;
         self.visit_expression(right)?;
 
         Ok(())
     }
 
-    fn visit_logical_or(&mut self, left: &mut Expr, right: &mut Expr) -> Output {
+    fn visit_logical_or(&mut self, left: &Expr, right: &Expr) -> Output {
         self.visit_expression(left)?;
         self.visit_expression(right)?;
 
@@ -308,46 +315,46 @@ impl VisitorMutable<Output> for Resolver {
     }
 
     /// Resolve a unary expression by resolving its operand
-    fn visit_unary(&mut self, _operator: &mut Token, right: &mut Expr) -> Output {
+    fn visit_unary(&mut self, _operator: &Token, right: &Expr) -> Output {
         self.visit_expression(right)?;
 
         Ok(())
     }
 
-    fn visit_get(&mut self, object: &mut Expr, _name: &mut Token) -> Output {
+    fn visit_get(&mut self, object: &Expr, _name: &Token) -> Output {
         self.visit_expression(object)?;
 
         Ok(())
     }
 
-    fn visit_set(&mut self, object: &mut Expr, _name: &mut Token, value: &mut Expr) -> Output {
+    fn visit_set(&mut self, object: &Expr, _name: &Token, value: &Expr) -> Output {
         self.visit_expression(object)?;
         self.visit_expression(value)?;
 
         Ok(())
     }
 
-    fn visit_this(&mut self, keyword: &mut Token, depth: &mut Depth) -> Output {
+    fn visit_this(&mut self, keyword: &Token, depth: &Depth) -> Output {
         if self.current_class == ClassType::None {
             return Self::error(keyword, "Can't use 'this' outside of a class");
         }
 
-        self.resolve_local(keyword, depth)?;
+        self.resolve_local(keyword)?;
 
         Ok(())
     }
 
-    fn visit_lambda(&mut self, params: &mut Vec<Token>, body: &mut Vec<Statement>) -> Output {
+    fn visit_lambda(&mut self, params: &Vec<Token>, body: Vec<Rc<Statement>>) -> Output {
         self.resolve_function(params, body, FunctionType::Function)?;
 
         Ok(())
     }
 
-    fn visit_literal(&mut self, _value: &mut Token) -> Output {
+    fn visit_literal(&mut self, _value: &Token) -> Output {
         Ok(())
     }
 
-    fn visit_class_statement(&mut self, name: &mut Token, methods: &mut [Statement]) -> Output {
+    fn visit_class_statement(&mut self, name: &Token, methods: Vec<Rc<Statement>>) -> Output {
         // Keep track of the enclosing class type
         let enclosing_class: ClassType = self.current_class;
         self.current_class = ClassType::Class;
@@ -361,7 +368,7 @@ impl VisitorMutable<Output> for Resolver {
         self.scopes.last_mut().unwrap().borrow_mut().insert("this".to_string(), true);
 
         for method in methods {
-            if let Statement::Function { name: method_name, params, body, .. } = method {
+            if let Statement::Function { name: method_name, params, body, .. } = &*method {
                 // Determine the function type based on whether the method is an initializer or a regular method
                 let function_type = if method_name.lexeme == "init" {
                     FunctionType::Initializer
@@ -369,7 +376,7 @@ impl VisitorMutable<Output> for Resolver {
                     FunctionType::Method
                 };
 
-                self.resolve_function(params, body, function_type)?;
+                self.resolve_function(params, body.clone(), function_type)?;
             }
         }
 
@@ -381,7 +388,7 @@ impl VisitorMutable<Output> for Resolver {
         Ok(())
     }
 
-    fn visit_expression_statement(&mut self, expression: &mut Expr) -> Output {
+    fn visit_expression_statement(&mut self, expression: &Expr) -> Output {
         self.visit_expression(expression)
     }
 }

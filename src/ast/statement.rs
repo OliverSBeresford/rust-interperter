@@ -1,15 +1,16 @@
 use crate::ast::expr::Expr;
 use crate::lexer::token::Token;
+use std::rc::Rc;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum Statement {
     Expression {
         expression: Expr,
     },
     If {
         condition: Expr,
-        then_branch: Box<Statement>,
-        else_branch: Option<Box<Statement>>,
+        then_branch: Rc<Statement>,
+        else_branch: Option<Rc<Statement>>,
     },
     Print {
         expression: Expr,
@@ -20,15 +21,15 @@ pub enum Statement {
     },
     While {
         condition: Expr,
-        body: Box<Statement>,
+        body: Rc<Statement>,
     },
     Block {
-        statements: Vec<Statement>,
+        statements: Vec<Rc<Statement>>,
     },
     Function {
         name: Token,
         params: Vec<Token>,
-        body: Vec<Statement>,
+        body: Vec<Rc<Statement>>,
     },
     Return {
         keyword: Token,
@@ -36,6 +37,6 @@ pub enum Statement {
     },
     Class {
         name: Token,
-        methods: Vec<Statement>,
+        methods: Vec<Rc<Statement>>,
     },
 }
