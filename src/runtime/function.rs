@@ -1,3 +1,6 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use crate::ast::statement::Statement;
 use crate::runtime::callable::Callable;
 use crate::runtime::control_flow::ControlFlow;
@@ -6,8 +9,6 @@ use crate::runtime::interpreter::Interpreter;
 use crate::runtime::instance::Instance;
 use crate::runtime::RuntimeError;
 use crate::runtime::value::Value;
-use std::cell::RefCell;
-use std::rc::Rc;
 
 pub type FunctionResult<T> = Result<T, ControlFlow>;
 

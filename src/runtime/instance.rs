@@ -1,7 +1,8 @@
 use std::rc::Rc;
 use std::cell::RefCell;
-use crate::runtime::function::Function;
 use std::collections::HashMap;
+
+use crate::runtime::function::Function;
 use crate::runtime::class::Class;
 use crate::runtime::value::Value;
 use crate::runtime::runtime_error::RuntimeError;

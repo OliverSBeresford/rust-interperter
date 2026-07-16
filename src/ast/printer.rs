@@ -1,8 +1,9 @@
+use std::rc::Rc;
+
 use crate::ast::Visitor;
 use crate::{Expr};
 use crate::Token;
 use crate::ast::Statement;
-use std::rc::Rc;
 
 type Output = String;
 

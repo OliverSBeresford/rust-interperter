@@ -4,6 +4,7 @@ use crate::ast::{Expr, Statement};
 use crate::lexer::token::Keyword::{False, Nil, True};
 use crate::lexer::token::{Keyword, Literal, Token, TokenType};
 use crate::parser::error::ParseError;
+
 pub struct Parser {
     tokens: Vec<Token>,
     current: usize,

@@ -1,7 +1,8 @@
+use std::rc::Rc;
+
 use crate::lexer::token::Token;
 use crate::ast::expr::Expr;
 use crate::ast::statement::Statement;
-use std::rc::Rc;
 
 pub trait Visitor<T> {
     // Expression visitor methods

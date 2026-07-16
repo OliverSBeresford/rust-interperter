@@ -1,6 +1,7 @@
+use std::rc::Rc;
+
 use crate::ast::expr::Expr;
 use crate::lexer::token::Token;
-use std::rc::Rc;
 
 #[derive(Debug)]
 pub enum Statement {
