@@ -100,6 +100,16 @@ impl Parser {
         let _ = self.advance();
     }
 
+    fn recover<T, F>(&mut self, parse: F) -> Result<T, ParseError>
+    where
+        F: FnOnce(&mut Self) -> Result<T, ParseError>,
+    {
+        parse(self).or_else(|err| {
+            self.synchronize();
+            Err(err)
+        })
+    }
+
     pub fn parse(&mut self) -> Vec<Statement> {
         let mut statements: Vec<Statement> = Vec::new();
 
@@ -119,34 +129,23 @@ impl Parser {
     fn declaration(&mut self) -> Result<Statement, ParseError> {
         // Parse different kinds of declarations based on the current token
         if self.check(&[TokenType::Keyword(Keyword::Var)]) {
-            return self.var_declaration().or_else(|err: ParseError| {
-                self.synchronize(); // Synchronize on error
-                Err(err)
-            });
-        } else if self.check(&[TokenType::Keyword(Keyword::Fun)]) {
+            return self.recover(|this| this.var_declaration());
+        }
+        
+        else if self.check(&[TokenType::Keyword(Keyword::Fun)]) {
             // Consume the 'fun' keyword
             self.advance()?;
 
             // Function declaration
-            return self
-                .function_declaration("function")
-                .or_else(|err: ParseError| {
-                    self.synchronize(); // Synchronize on error
-                    Err(err)
-                });
-        } else if self.check(&[TokenType::Keyword(Keyword::Class)]) {
-            // Class declaration
-            return self
-                .class_declaration()
-                .or_else(|err: ParseError| {
-                    self.synchronize(); // Synchronize on error
-                    Err(err)
-                });
+            return self.recover(|this| this.function_declaration("function"));
         }
-        self.statement().or_else(|err: ParseError| {
-            self.synchronize(); // Synchronize on error
-            Err(err)
-        })
+        
+        else if self.check(&[TokenType::Keyword(Keyword::Class)]) {
+            // Class declaration
+            return self.recover(|this| this.class_declaration());
+        }
+        
+        self.recover(|this| this.statement())
     }
 
     fn var_declaration(&mut self) -> Result<Statement, ParseError> {
