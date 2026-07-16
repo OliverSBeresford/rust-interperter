@@ -100,6 +100,8 @@ impl Parser {
         let _ = self.advance();
     }
 
+    /// Run the provided parse function and recover from any errors that occur during parsing.
+    /// If an error occurs, the parser will synchronize to the next statement and return the error
     fn recover<T, F>(&mut self, parse: F) -> Result<T, ParseError>
     where
         F: FnOnce(&mut Self) -> Result<T, ParseError>,
@@ -144,7 +146,7 @@ impl Parser {
             // Class declaration
             return self.recover(|this| this.class_declaration());
         }
-        
+
         self.recover(|this| this.statement())
     }
 
