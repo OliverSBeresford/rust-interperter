@@ -117,7 +117,7 @@ impl Parser {
     }
 
     fn declaration(&mut self) -> Result<Statement, ParseError> {
-        // For now, only parse variable declarations and statements
+        // Parse different kinds of declarations based on the current token
         if self.check(&[TokenType::Keyword(Keyword::Var)]) {
             return self.var_declaration().or_else(|err: ParseError| {
                 self.synchronize(); // Synchronize on error
