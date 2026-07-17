@@ -17,9 +17,10 @@ fn parse_stmts(input: &str) -> (Interpreter, Vec<Statement>) {
     let mut parser = Parser::new(tokens.tokens);
     let statements = parser.parse();
     let statement_refs: Vec<Rc<Statement>> = statements.into_iter().map(|stmt| Rc::new(stmt)).collect();
-    let interpreter = Interpreter::new(Resolver::new());
+    // Resolve statements and return an Interpreter that contains the resolver
     let mut resolver = Resolver::new();
     resolver.resolve_statements(statement_refs.clone());
+    let interpreter = Interpreter::new(resolver);
     (interpreter, statement_refs.into_iter().map(|stmt| Rc::try_unwrap(stmt).unwrap_or_else(|_| panic!("failed to unwrap Rc"))).collect())
 }
 
