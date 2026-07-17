@@ -54,7 +54,7 @@ fn main() {
             let ast: Vec<Statement> = parser.parse();
 
             // Print the AST using the visit method
-            let mut printer = AstPrinter::new();
+            let mut printer = AstPrinter::new_colored();
             printer.print_statements(ast.into_iter().map(|stmt| Rc::new(stmt)).collect());
         }
         // Evaluate the input file and print the result
