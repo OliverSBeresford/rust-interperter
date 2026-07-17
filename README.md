@@ -1,14 +1,37 @@
-# A tiny Lox interpreter in Rust
+# rust-interpreter — a near-complete Lox implementation in Rust
 
-This repository contains an in-progress Rust implementation of Lox from Crafting Interpreters. It includes a scanner, parser that builds an AST, and a tree-walk interpreter with environments, functions, and control flow.
+This repository contains a near-complete Rust implementation of the Lox language (from Crafting Interpreters). It provides a full scanner, parser (AST), resolver, and a tree-walk interpreter with a working runtime supporting functions, classes, closures, and native calls.
 
-## Features
+## Key features
 
-- Tokenize Lox source into a stream of tokens
-- Parse expressions and statements into an AST
-- Print a parenthesized representation of the AST for debugging
-- Evaluate expressions and print results
-- Execute variable declarations, blocks, `if`/`else`, `while`, `for`, `print`, and function calls
+- Lexing
+	- Tokenizes numbers (integers & floats), strings, identifiers, keywords, punctuation
+	- Supports single-line comments (`//`) and line tracking for error messages
+
+- Parsing
+	- Full expression grammar with precedence (grouping, unary, binary, comparison, equality, logical)
+	- Call and property access (`call`, `.`)
+	- Function declarations and anonymous functions (lambdas)
+	- Class declarations and method parsing (including `init` as an initializer)
+	- Control flow statements: `if`/`else`, `while`, `for` (desugared to `while`), `print`, `return`
+	- Variable declarations and assignments
+
+- Static analysis / resolver
+	- Lexical scope tracking with a resolver that computes depth for variable lookups
+	- Detects invalid uses of `this`, `return` outside functions, and reads of vars in their own initializer
+
+- Runtime / Interpreter
+	- Tree-walk interpreter with nested `Environment`s and depth-based lookups
+	- Value types: integers, floats, strings, booleans, `nil`, callables, and instances
+	- Arithmetic, comparison, logical operators, and string concatenation
+	- Functions: first-class functions, closures (capture environment), `return` handling, arity checks
+	- Lambdas: create and call anonymous functions with captured closures
+	- Classes & instances: define classes, create instances, instance fields, methods, and method binding (`this`)
+	- Initializers (constructor-like `init` methods) return the instance
+
+- Native functions & extras
+	- `clock()` native function returning seconds since the epoch
+	- Helpful runtime error reporting with source line numbers
 
 ## Requirements
 
@@ -17,7 +40,7 @@ This repository contains an in-progress Rust implementation of Lox from Crafting
 
 ## Quickstart
 
-Build once, then run the helper script with a command and input file:
+Build and run the helper script with a command and input file:
 
 ```sh
 ./your_program.sh <command> test.lox
@@ -32,7 +55,7 @@ Common commands:
 # Print the AST in parenthesized form
 ./your_program.sh parse test.lox
 
-# Evaluate a single expression
+# Evaluate a single expression (will not work for a full Lox file)
 ./your_program.sh evaluate test.lox
 
 # Run a program consisting of statements
@@ -47,38 +70,34 @@ Common commands:
 Given `test.lox`:
 
 ```lox
-7 * 3 / 7 / 1
+var x = 7 * 3 / 7 / 1;
+print x;
 ```
 
-Tokens:
+You can tokenize, parse, or run the program using the helper script. The interpreter supports integer and float arithmetic, string concatenation, functions, classes, and more.
 
-```text
-NUMBER 7 7.0
-STAR * null
-NUMBER 3 3.0
-SLASH / null
-NUMBER 7 7.0
-SLASH / null
-NUMBER 1 1.0
-EOF  null
+## Development & tests
+
+- Run the full test suite:
+
+```sh
+cargo test
 ```
 
-AST (parenthesized):
+- Run specific tests:
 
-```text
-(/ (/ (* 7.0 3.0) 7.0) 1.0)
+```sh
+cargo test lexer_tests
+cargo test parser_tests
+cargo test interpreter_tests
 ```
 
-Evaluation result:
+## Files of interest
 
-```text
-3
-```
-
-## Development
-
-- Run the full test suite: `cargo test`
-- Run only lexer/parser/interpreter tests: `cargo test lexer_tests`, `cargo test parser_tests`, `cargo test interpreter_tests`
+- `src/lexer` — scanning and token representation
+- `src/parser` — parser and resolver (scope depth calculation)
+- `src/ast` — AST nodes, visitor and printer
+- `src/runtime` — interpreter, environment, functions, classes, native callables
 
 ## References
 
