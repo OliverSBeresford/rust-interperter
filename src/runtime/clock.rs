@@ -1,10 +1,7 @@
-use std::time::{SystemTime, UNIX_EPOCH};
 use std::rc::Rc;
+use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::runtime::callable::Callable;
-use crate::runtime::control_flow::ControlFlow;
-use crate::runtime::interpreter::Interpreter;
-use crate::runtime::value::Value;
+use crate::runtime::{Callable, ControlFlow, Interpreter, Value};
 
 /// A native function that returns the current time in seconds since the Unix epoch.
 #[derive(Debug)]

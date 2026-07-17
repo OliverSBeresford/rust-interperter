@@ -2,18 +2,12 @@ use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
 
-use crate::Resolver;
-use crate::parser::Depth;
-use crate::ast::{Expr, Statement, Visitor};
-use crate::lexer::token::{Literal, Token, TokenType};
-use crate::runtime::clock::Clock;
-use crate::runtime::control_flow::ControlFlow;
-use crate::runtime::environment::{EnvRef, Environment};
-use crate::runtime::function::Function;
-use crate::runtime::callable::Callable;
-use crate::runtime::runtime_error::RuntimeError;
-use crate::runtime::value::Value;
-use crate::runtime::class::Class;
+use crate::{
+    ast::{Expr, Statement, Visitor},
+    lexer::{Literal, Token, TokenType},
+    parser::{Depth, Resolver},
+    runtime::{Callable, Class, Clock, ControlFlow, EnvRef, Environment, Function, RuntimeError, Value},
+};
 
 pub type InterpreterResult<T> = Result<T, ControlFlow>;
 

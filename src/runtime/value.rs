@@ -1,8 +1,7 @@
 use std::rc::Rc;
 use std::cell::RefCell;
 
-use crate::runtime::callable::Callable;
-use crate::runtime::instance::Instance;
+use crate::runtime::{Callable, Instance};
 
 // Define a Value enum to represent evaluated values, can be anything because Lox is dynamically typed
 #[derive(Debug, Clone)]

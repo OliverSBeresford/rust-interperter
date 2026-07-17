@@ -1,13 +1,11 @@
 use std::rc::Rc;
-use std::cell::RefCell;
 use std::collections::HashMap;
+use std::cell::RefCell;
 
-use crate::runtime::function::Function;
-use crate::runtime::class::Class;
-use crate::runtime::value::Value;
-use crate::runtime::runtime_error::RuntimeError;
-use crate::lexer::token::Token;
-use crate::runtime::control_flow::ControlFlow;
+use crate::{
+    runtime::{Class, ControlFlow, Function, RuntimeError, Value},
+    lexer::Token
+};
 
 #[derive(Debug)]
 pub struct Instance {

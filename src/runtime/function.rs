@@ -1,14 +1,10 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::ast::statement::Statement;
-use crate::runtime::callable::Callable;
-use crate::runtime::control_flow::ControlFlow;
-use crate::runtime::environment::{EnvRef, Environment};
-use crate::runtime::interpreter::Interpreter;
-use crate::runtime::instance::Instance;
-use crate::runtime::RuntimeError;
-use crate::runtime::value::Value;
+use crate::{
+    runtime::{Callable, ControlFlow, EnvRef, Environment, Instance, Interpreter, RuntimeError, Value},
+    ast::Statement,
+};
 
 pub type FunctionResult<T> = Result<T, ControlFlow>;
 

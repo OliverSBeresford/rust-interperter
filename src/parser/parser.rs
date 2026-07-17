@@ -1,9 +1,10 @@
 use std::rc::Rc;
 
-use crate::ast::{Expr, Statement};
-use crate::lexer::token::Keyword::{False, Nil, True};
-use crate::lexer::token::{Keyword, Literal, Token, TokenType};
-use crate::parser::error::ParseError;
+use crate::{
+    ast::{Expr, Statement},
+    lexer::{Keyword, Literal, Token, TokenType},
+    parser::ParseError
+};
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -670,7 +671,7 @@ impl Parser {
                     expression: Box::new(expr),
                 })
             }
-            TokenType::Keyword(Nil) | TokenType::Keyword(False) | TokenType::Keyword(True) => {
+            TokenType::Keyword(Keyword::Nil) | TokenType::Keyword(Keyword::False) | TokenType::Keyword(Keyword::True) => {
                 Ok(Expr::Literal { value: current_token })
             }
             TokenType::Keyword(Keyword::Fun) => self.lambda_expression(),

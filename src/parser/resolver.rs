@@ -2,11 +2,11 @@ use std::collections::HashMap;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::Statement;
-use crate::Expr;
-use crate::Token;
-use crate::ParseError;
-use crate::ast::Visitor;
+use crate::{
+    ast::{Visitor, Expr, Statement},
+    parser::ParseError,
+    lexer::Token
+};
 
 /// Type alias for a scope lookup table (maps variable names to defined status)
 pub type Lookup = RefCell<HashMap<String, bool>>;

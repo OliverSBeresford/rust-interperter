@@ -1,13 +1,8 @@
 use std::collections::HashMap;
-use std::rc::Rc;
 use std::cell::RefCell;
+use std::rc::Rc;
 
-use crate::runtime::callable::Callable;
-use crate::runtime::control_flow::ControlFlow;
-use crate::runtime::interpreter::Interpreter;
-use crate::runtime::value::Value;
-use crate::runtime::function::Function;
-use crate::runtime::instance::Instance;
+use crate::runtime::{Callable, ControlFlow, Function, Instance, Interpreter, Value};
 
 pub type FunctionResult<T> = Result<T, ControlFlow>;
 

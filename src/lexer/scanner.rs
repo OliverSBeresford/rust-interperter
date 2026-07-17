@@ -2,7 +2,7 @@ use std::fmt;
 use std::iter::Peekable;
 use std::str::CharIndices;
 
-use crate::lexer::token::{Keyword, Literal, Token, TokenType};
+use crate::{Keyword, Literal, Token, TokenType};
 
 pub struct TokenArray {
     pub tokens: Vec<Token>,

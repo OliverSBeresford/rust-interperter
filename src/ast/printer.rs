@@ -1,9 +1,9 @@
 use std::rc::Rc;
 
-use crate::ast::Visitor;
-use crate::{Expr};
-use crate::Token;
-use crate::ast::Statement;
+use crate::{
+    ast::{Visitor, Expr, Statement},
+    lexer::Token
+};
 
 type Output = String;
 

@@ -2,9 +2,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::runtime::control_flow::ControlFlow;
-use crate::runtime::runtime_error::RuntimeError;
-use crate::runtime::value::Value;
+use crate::runtime::{ControlFlow, RuntimeError, Value};
 
 // Type for a reference to an Environment wrapped in Rc and RefCell for shared ownership and mutability
 pub type EnvRef = Rc<RefCell<Environment>>;

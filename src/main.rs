@@ -1,12 +1,15 @@
-use std::env;
-use std::fs;
-use std::io::{self, Write};
-use std::rc::Rc;
-use rust_interpreter::Statement;
-use rust_interpreter::parser::Resolver;
-use rust_interpreter::ast::visitor::Visitor;
+use std::{env, fs, io::{self, Write}, rc::Rc};
 
-use rust_interpreter::{AstPrinter, ControlFlow, Interpreter, Parser, scan};
+use rust_interpreter::{
+    ast::visitor::Visitor,
+    AstPrinter,
+    ControlFlow,
+    Interpreter,
+    Parser,
+    Resolver,
+    Statement,
+    scan,
+};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
