@@ -152,6 +152,9 @@ impl Parser {
         self.recover(|this| this.statement())
     }
 
+    /// Parse a variable declaration statement, which can be either a simple variable or a variable with an initializer.
+    ///
+    /// Consumes the 'var' keyword
     fn var_declaration(&mut self) -> Result<Statement, ParseError> {
         // Consume the 'var' keyword
         let _var_token = self.advance();
@@ -182,6 +185,9 @@ impl Parser {
         })
     }
 
+    /// Parse a function declaration, which can be either a named function or an anonymous lambda.
+    /// 
+    /// Does not consume the 'fun' keyword, which should be done before calling this function.
     fn function_declaration(&mut self, kind: &str) -> Result<Statement, ParseError> {
         // Consume the function name
         let name_token = self.consume(TokenType::Identifier, &format!("Expect {} name.", kind))?;
