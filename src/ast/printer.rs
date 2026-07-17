@@ -10,11 +10,16 @@ type Output = String;
 // Pretty-printer with depth-aware colored parentheses
 pub struct AstPrinter {
     depth: usize,
+    use_colors: bool,
 }
 
 impl AstPrinter {
     pub fn new() -> Self {
-        AstPrinter { depth: 0 }
+        AstPrinter { depth: 0, use_colors: false }
+    }
+
+    pub fn new_colored() -> Self {
+        AstPrinter { depth: 0, use_colors: true }
     }
 
     pub fn print_expression(&mut self, expr: &Expr) {
@@ -37,6 +42,9 @@ impl AstPrinter {
 
     // Return the ANSI color code prefix for a given depth (cycles a small palette)
     fn color_code(&self, depth: usize) -> &'static str {
+        if !self.use_colors {
+            return "";
+        }
         match depth % 6 {
             0 => "\x1b[31m", // red
             1 => "\x1b[32m", // green
@@ -48,10 +56,16 @@ impl AstPrinter {
     }
 
     fn colored_open(&self, depth: usize) -> String {
+        if !self.use_colors {
+            return "(".to_string();
+        }
         format!("{}(\x1b[0m", self.color_code(depth))
     }
 
     fn colored_close(&self, depth: usize) -> String {
+        if !self.use_colors {
+            return ")".to_string();
+        }
         format!("{})\x1b[0m", self.color_code(depth))
     }
 
