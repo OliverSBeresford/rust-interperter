@@ -51,19 +51,11 @@ fn main() {
             
             // Create a parser and parse the tokens into an AST
             let mut parser = Parser::new(tokens.tokens);
-            let expression = parser.expression();
+            let ast: Vec<Statement> = parser.parse();
 
             // Print the AST using the visit method
-            match expression {
-                Ok(expr) => {
-                    let mut printer = AstPrinter;
-                    printer.print_expression(&expr);
-                }
-                Err(error) => {
-                    eprintln!("{}", error);
-                    std::process::exit(65);
-                }
-            }
+            let mut printer = AstPrinter::new();
+            printer.print_statements(ast.into_iter().map(|stmt| Rc::new(stmt)).collect());
         }
         // Evaluate the input file and print the result
         "evaluate" => {
