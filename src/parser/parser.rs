@@ -50,7 +50,9 @@ impl Parser {
                     | Keyword::If
                     | Keyword::While
                     | Keyword::Print
-                    | Keyword::Return => {
+                    | Keyword::Return
+                    | Keyword::Static
+                    => {
                         return;
                     }
                     _ => {}
@@ -81,6 +83,14 @@ impl Parser {
     /// Check if the current token is of one of the expected types
     fn check(&self, expected: &[TokenType]) -> bool {
         if let Some(token) = self.current_token() {
+            return expected.contains(&token.token_type);
+        }
+        false
+    }
+
+    /// Check if the token at a given offset from the current token is of one of the expected types
+    fn check_at(&self, offset: usize, expected: &[TokenType]) -> bool {
+        if let Some(token) = self.tokens.get(self.current + offset) {
             return expected.contains(&token.token_type);
         }
         false
@@ -249,15 +259,19 @@ impl Parser {
 
         // Parse static methods (checks for 'static fun' syntax)
         let mut static_methods: Vec<Rc<Statement>> = Vec::new();
-        while self.check(&[TokenType::Keyword(Keyword::Static)]) {
+        while self.check(&[TokenType::Keyword(Keyword::Static)]) && self.check_at(1, &[TokenType::Keyword(Keyword::Fun)]) {
             // Consume the 'static' keyword
+            self.advance()?;
+            // Consume the 'fun' keyword
             self.advance()?;
             static_methods.push(Rc::new(self.function_declaration("static method")?));
         }
 
         // Parse the methods in the class
         let mut methods: Vec<Rc<Statement>> = Vec::new();
-        while !self.check(&[TokenType::RightBrace]) && self.current < self.tokens.len() - 1 {
+        while self.check(&[TokenType::Keyword(Keyword::Fun)]) && self.current < self.tokens.len() - 1 {
+            // Consume the 'fun' keyword
+            self.advance()?;
             methods.push(Rc::new(self.function_declaration("method")?));
         }
 
