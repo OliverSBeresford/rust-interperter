@@ -2,7 +2,10 @@ use std::collections::HashMap;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::runtime::{Callable, ControlFlow, Function, Instance, Interpreter, Value, RuntimeError};
+use crate::{
+    runtime::{Callable, ControlFlow, Function, Instance, Interpreter, Value, RuntimeError},
+    lexer::Token
+};
 
 pub type FunctionResult<T> = Result<T, ControlFlow>;
 
@@ -31,18 +34,18 @@ impl Class {
         self.static_fields.get(name).cloned()
     }
 
-    pub fn get(self: Rc<Self>, name: &str) -> Result<Value, ControlFlow> {
+    pub fn get(self: Rc<Self>, name: &Token) -> Result<Value, ControlFlow> {
         // Check if it's a static field
-        if let Some(value) = self.get_static_field(name) {
+        if let Some(value) = self.get_static_field(&name.lexeme) {
             return Ok(value);
         }
 
         // Check if it's a static method
-        if let Some(method) = self.get_static_method(name) {
+        if let Some(method) = self.get_static_method(&name.lexeme) {
             return Ok(Value::Callable(Rc::new(method.bind_class(self.clone()))));
         }
 
-        Err(ControlFlow::RuntimeError(RuntimeError::new(0, format!("Undefined static property '{}'.", name))))
+        Err(ControlFlow::RuntimeError(RuntimeError::new(name.line, format!("Undefined static property '{}'.", name.lexeme))))
     }
 }
 

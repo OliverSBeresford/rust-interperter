@@ -508,7 +508,7 @@ impl Visitor<InterpreterResult<Value>> for Interpreter {
         else if let Value::Callable(class) = object_value {
             // Check if the callable is a Class
             if let Ok(class) = class.into_any_rc().downcast::<Class>() {
-                return Ok(class.get(&name.lexeme)?);
+                return Ok(class.get(name)?);
             } else {
                 return Self::error(name, "Only instances and classes have fields.");
             }
