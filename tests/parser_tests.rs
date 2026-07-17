@@ -33,5 +33,5 @@ fn parse_math_expression() {
     let expr = parser.expression().unwrap_or_else(|e| panic!("parse error: {}", e));
     
     // Use AstPrinter to get the string representation of the AST
-    assert!(matches!(AstPrinter.print_to_string(&expr).as_str(), "(+ (+ (- (+ 1.0 (* 2.0 4.0)) 8.0) (/ 9.0 2.99)) (group (- 3.0 (group (/ 4.0 2.0)))))"));
+    assert!(matches!(AstPrinter::new().print_to_string(&expr).as_str(), "(+ (+ (- (+ 1.0 (* 2.0 4.0)) 8.0) (/ 9.0 2.99)) (group (- 3.0 (group (/ 4.0 2.0)))))"));
 }
