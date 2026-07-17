@@ -493,6 +493,10 @@ impl Visitor<InterpreterResult<Value>> for Interpreter {
         self.lookup_variable(keyword)
     }
 
+    fn visit_THIS(&mut self, keyword: &Token) -> InterpreterResult<Value> {
+        self.lookup_variable(keyword)
+    }
+
     fn visit_get(&mut self, object: &Expr, name: &Token) -> InterpreterResult<Value> {
         let object_value = self.visit_expression(object)?;
 
@@ -503,14 +507,8 @@ impl Visitor<InterpreterResult<Value>> for Interpreter {
         // Handle static field and method access for classes
         else if let Value::Callable(class) = object_value {
             // Check if the callable is a Class
-            if let Some(class) = class.as_any().downcast_ref::<Class>() {
-                if let Some(static_field_value) = class.get_static_field(&name.lexeme) {
-                    return Ok(static_field_value);
-                } else if let Some(static_method) = class.get_static_method(&name.lexeme) {
-                    return Ok(Value::Callable(static_method));
-                } else {
-                    return Self::error(name, &format!("Undefined static field or method '{}'.", name.lexeme));
-                }
+            if let Ok(class) = class.into_any_rc().downcast::<Class>() {
+                return Ok(class.get(&name.lexeme)?);
             } else {
                 return Self::error(name, "Only instances and classes have fields.");
             }

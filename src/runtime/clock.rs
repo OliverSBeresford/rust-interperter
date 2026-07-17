@@ -28,7 +28,9 @@ impl Callable for Clock {
         "clock"
     }
 
-    fn as_any(&self) -> &dyn Any {
+    fn into_any_rc(self: Rc<Self>) -> Rc<dyn Any>
+        where Self: 'static
+    {
         self
     }
 }

@@ -1,15 +1,16 @@
 class Bagel {
     var shape = "torus";
 
-    static getShape() {
-        return Bagel.shape;
+    static fun getShape() {
+        return This.shape;
     }
 
-    init(flavor) {
+    fun init(flavor) {
         this.flavor = flavor;
+        print This.shape; // Output: torus
     }
 
-    eat() {
+    fun eat() {
         print "The " + this.flavor + " bagel is delicious!";
         this.flavor = "Eaten";
     }

@@ -357,6 +357,17 @@ impl Visitor<Output> for Resolver {
         Ok(())
     }
 
+    fn visit_THIS(&mut self, keyword: &Token) -> Output {
+        // Error if 'this' used outside of a class or in a static method
+        if self.current_class == ClassType::None {
+            return Self::error(keyword, "Can't use 'this' outside of a class");
+        }
+
+        self.resolve_local(keyword)?;
+
+        Ok(())
+    }
+
     fn visit_lambda(&mut self, params: &Vec<Token>, body: Vec<Rc<Statement>>) -> Output {
         self.resolve_function(params, body, FunctionType::Function)?;
 
@@ -381,6 +392,10 @@ impl Visitor<Output> for Resolver {
            self.visit_statement(static_field)?;
         }
 
+        // Begin a new scope for the class methods and define 'This' in the scope which is the class itself
+        self.begin_scope()?;
+        self.scopes.last_mut().unwrap().borrow_mut().insert("This".to_string(), true);
+
         // Resolve static methods
         for static_method in static_methods {
             if let Statement::Function { params, body, .. } = &*static_method {
@@ -388,8 +403,7 @@ impl Visitor<Output> for Resolver {
             }
         }
 
-        // Begin a new scope for the class methods and define "this" in that scope
-        self.begin_scope()?;
+        // Add 'this' to the current scope for instance methods
         self.scopes.last_mut().unwrap().borrow_mut().insert("this".to_string(), true);
 
         for method in methods {

@@ -30,6 +30,20 @@ impl Class {
     pub fn get_static_field(&self, name: &str) -> Option<Value> {
         self.static_fields.get(name).cloned()
     }
+
+    pub fn get(self: Rc<Self>, name: &str) -> Result<Value, ControlFlow> {
+        // Check if it's a static field
+        if let Some(value) = self.get_static_field(name) {
+            return Ok(value);
+        }
+
+        // Check if it's a static method
+        if let Some(method) = self.get_static_method(name) {
+            return Ok(Value::Callable(Rc::new(method.bind_class(self.clone()))));
+        }
+
+        Err(ControlFlow::RuntimeError(crate::runtime::RuntimeError::new(0, format!("Undefined static property '{}'.", name))))
+    }
 }
 
 impl Callable for Class {
@@ -65,7 +79,9 @@ impl Callable for Class {
         &self.name
     }
 
-    fn as_any(&self) -> &dyn std::any::Any {
+    fn into_any_rc(self: Rc<Self>) -> Rc<dyn std::any::Any>
+        where Self: 'static
+    {
         self
     }
 }

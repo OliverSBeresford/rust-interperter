@@ -2,7 +2,7 @@ use std::{any::Any, cell::RefCell};
 use std::rc::Rc;
 
 use crate::{
-    runtime::{Callable, ControlFlow, EnvRef, Environment, Instance, Interpreter, RuntimeError, Value},
+    runtime::{Class, Callable, ControlFlow, EnvRef, Environment, Instance, Interpreter, RuntimeError, Value},
     ast::Statement,
 };
 
@@ -46,7 +46,25 @@ impl Function {
         let bound_closure: EnvRef = Environment::new(Some(self.closure.clone()));
         bound_closure
             .borrow_mut()
+            .define("This".to_string(), Value::Callable(instance.borrow().class.clone()));
+        bound_closure
+            .borrow_mut()
             .define("this".to_string(), Value::Instance(instance));
+
+        Function {
+            name: self.name.clone(),
+            params: self.params.clone(),
+            body: self.body.clone(),
+            closure: bound_closure,
+            is_initializer: self.is_initializer,
+        }
+    }
+
+    pub fn bind_class(&self, class: Rc<Class>) -> Self {
+        let bound_closure: EnvRef = Environment::new(Some(self.closure.clone()));
+        bound_closure
+            .borrow_mut()
+            .define("This".to_string(), Value::Callable(class));
 
         Function {
             name: self.name.clone(),
@@ -115,7 +133,9 @@ impl Callable for Function {
         &self.name
     }
 
-    fn as_any(&self) -> &dyn Any {
+    fn into_any_rc(self: Rc<Self>) -> Rc<dyn Any>
+        where Self: 'static
+    {
         self
     }
 }

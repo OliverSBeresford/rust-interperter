@@ -56,6 +56,9 @@ pub enum Expr {
     This {
         keyword: Token,
     },
+    THIS {
+        keyword: Token,
+    },
     Lambda {
         params: Vec<Token>,
         body: Vec<Rc<Statement>>,

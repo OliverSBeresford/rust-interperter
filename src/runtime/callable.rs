@@ -9,5 +9,6 @@ pub trait Callable: Debug {
     fn call(self: Rc<Self>, interpreter: &mut Interpreter, args: Vec<Value>) -> Result<Value, ControlFlow>;
     fn to_string(&self) -> String;
     fn name(&self) -> &str;
-    fn as_any(&self) -> &dyn Any;
+    fn into_any_rc(self: Rc<Self>) -> Rc<dyn Any>
+        where Self: 'static;
 }
