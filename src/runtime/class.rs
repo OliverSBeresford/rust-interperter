@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::runtime::{Callable, ControlFlow, Function, Instance, Interpreter, Value};
+use crate::runtime::{Callable, ControlFlow, Function, Instance, Interpreter, Value, RuntimeError};
 
 pub type FunctionResult<T> = Result<T, ControlFlow>;
 
@@ -42,7 +42,7 @@ impl Class {
             return Ok(Value::Callable(Rc::new(method.bind_class(self.clone()))));
         }
 
-        Err(ControlFlow::RuntimeError(crate::runtime::RuntimeError::new(0, format!("Undefined static property '{}'.", name))))
+        Err(ControlFlow::RuntimeError(RuntimeError::new(0, format!("Undefined static property '{}'.", name))))
     }
 }
 
