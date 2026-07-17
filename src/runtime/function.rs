@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::{any::Any, cell::RefCell};
 use std::rc::Rc;
 
 use crate::{
@@ -113,5 +113,9 @@ impl Callable for Function {
 
     fn name(&self) -> &str {
         &self.name
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }

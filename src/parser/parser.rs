@@ -73,12 +73,12 @@ impl Parser {
         }
     }
 
-    // Get the current token without advancing the parser
+    /// Get the current token without advancing the parser
     fn current_token(&self) -> Option<&Token> {
         self.tokens.get(self.current)
     }
 
-    // Check if the current token is of one of the expected types
+    /// Check if the current token is of one of the expected types
     fn check(&self, expected: &[TokenType]) -> bool {
         if let Some(token) = self.current_token() {
             return expected.contains(&token.token_type);
@@ -241,6 +241,20 @@ impl Parser {
         // Consume the '{' token
         self.consume(TokenType::LeftBrace, "Expect '{' before class body.")?;
 
+        // Parse static fields
+        let mut static_fields: Vec<Rc<Statement>> = Vec::new();
+        while self.check(&[TokenType::Keyword(Keyword::Var)]) {
+            static_fields.push(Rc::new(self.var_declaration()?));
+        }
+
+        // Parse static methods (checks for 'static fun' syntax)
+        let mut static_methods: Vec<Rc<Statement>> = Vec::new();
+        while self.check(&[TokenType::Keyword(Keyword::Static)]) {
+            // Consume the 'static' keyword
+            self.advance()?;
+            static_methods.push(Rc::new(self.function_declaration("static method")?));
+        }
+
         // Parse the methods in the class
         let mut methods: Vec<Rc<Statement>> = Vec::new();
         while !self.check(&[TokenType::RightBrace]) && self.current < self.tokens.len() - 1 {
@@ -250,7 +264,7 @@ impl Parser {
         // Consume the '}' token
         self.consume(TokenType::RightBrace, "Expect '}' after class body.")?;
 
-        Ok(Statement::Class { name: name_token, methods })
+        Ok(Statement::Class { name: name_token, methods, static_fields, static_methods })
     }
 
     fn statement(&mut self) -> Result<Statement, ParseError> {

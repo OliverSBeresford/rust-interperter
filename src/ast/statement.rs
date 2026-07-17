@@ -41,5 +41,7 @@ pub enum Statement {
     Class {
         name: Token,
         methods: Vec<Rc<Statement>>,
+        static_fields: Vec<Rc<Statement>>,
+        static_methods: Vec<Rc<Statement>>,
     },
 }

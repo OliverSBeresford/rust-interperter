@@ -20,6 +20,7 @@ pub enum Keyword {
     True,
     Var,
     While,
+    Static, // Added Static keyword for static methods
 }
 
 // static perfect-hash map from string -> Keyword
@@ -40,6 +41,7 @@ static KEYWORDS: phf::Map<&'static str, Keyword> = phf_map! {
     "true" => Keyword::True,
     "var" => Keyword::Var,
     "while" => Keyword::While,
+    "static" => Keyword::Static,
 };
 
 impl Keyword {

@@ -270,14 +270,23 @@ impl Visitor<Output> for AstPrinter {
         }
     }
 
-    fn visit_class_statement(&mut self, name: &Token, methods: Vec<Rc<Statement>>) -> Output {
+    fn visit_class_statement(&mut self, name: &Token, methods: Vec<Rc<Statement>>, static_fields: Vec<Rc<Statement>>, static_methods: Vec<Rc<Statement>>) -> Output {
         let (open, close) = self.get_open_close();
         self.depth += 1;
         let mut inner = format!("class {}", name.lexeme);
+
+        // Iterate over methods, static fields, and static methods and append their string representations
         for method in methods {
             inner.push_str(&format!(" {}", self.visit_statement(method)));
         }
+        for static_field in static_fields {
+            inner.push_str(&format!(" {}", self.visit_statement(static_field)));
+        }
+        for static_method in static_methods {
+            inner.push_str(&format!(" {}", self.visit_statement(static_method)));
+        }
         self.depth -= 1;
+        
         format!("{}{}{}", open, inner, close)
     }
 }

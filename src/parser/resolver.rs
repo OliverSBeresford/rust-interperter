@@ -18,6 +18,7 @@ enum FunctionType {
     None,
     Function,
     Initializer,
+    Static,
     Method,
 }
 
@@ -342,8 +343,13 @@ impl Visitor<Output> for Resolver {
     }
 
     fn visit_this(&mut self, keyword: &Token) -> Output {
+        // Error if 'this' used outside of a class or in a static method
         if self.current_class == ClassType::None {
             return Self::error(keyword, "Can't use 'this' outside of a class");
+        }
+        // Error if 'this' used in a static method
+        else if self.current_function == FunctionType::Static {
+            return Self::error(keyword, "Can't use 'this' in a static method");
         }
 
         self.resolve_local(keyword)?;
@@ -361,7 +367,7 @@ impl Visitor<Output> for Resolver {
         Ok(())
     }
 
-    fn visit_class_statement(&mut self, name: &Token, methods: Vec<Rc<Statement>>) -> Output {
+    fn visit_class_statement(&mut self, name: &Token, methods: Vec<Rc<Statement>>, static_fields: Vec<Rc<Statement>>, static_methods: Vec<Rc<Statement>>) -> Output {
         // Keep track of the enclosing class type
         let enclosing_class: ClassType = self.current_class;
         self.current_class = ClassType::Class;
@@ -369,6 +375,18 @@ impl Visitor<Output> for Resolver {
         // Declare the class name
         self.declare(name)?;
         self.define(name)?;
+
+        // Resolve static fields
+        for static_field in static_fields {
+           self.visit_statement(static_field)?;
+        }
+
+        // Resolve static methods
+        for static_method in static_methods {
+            if let Statement::Function { params, body, .. } = &*static_method {
+                self.resolve_function(params, body.clone(), FunctionType::Static)?;
+            }
+        }
 
         // Begin a new scope for the class methods and define "this" in that scope
         self.begin_scope()?;

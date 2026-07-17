@@ -10,15 +10,25 @@ pub type FunctionResult<T> = Result<T, ControlFlow>;
 pub struct Class {
     pub name: String,
     pub methods: HashMap<String, Rc<Function>>,
+    pub static_fields: HashMap<String, Value>,
+    pub static_methods: HashMap<String, Rc<Function>>,
 }
 
 impl Class {
-    pub fn new(name: String, methods: HashMap<String, Rc<Function>>) -> Self {
-        Class { name, methods }
+    pub fn new(name: String, methods: HashMap<String, Rc<Function>>, static_fields: HashMap<String, Value>, static_methods: HashMap<String, Rc<Function>>) -> Self {
+        Class { name, methods, static_fields, static_methods }
     }
 
     pub fn find_method(&self, name: &str) -> Option<Rc<Function>> {
         self.methods.get(name).cloned()
+    }
+
+    pub fn get_static_method(&self, name: &str) -> Option<Rc<Function>> {
+        self.static_methods.get(name).cloned()
+    }
+
+    pub fn get_static_field(&self, name: &str) -> Option<Value> {
+        self.static_fields.get(name).cloned()
     }
 }
 
@@ -53,5 +63,9 @@ impl Callable for Class {
 
     fn name(&self) -> &str {
         &self.name
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
     }
 }

@@ -1,5 +1,6 @@
 use std::rc::Rc;
 use std::time::{SystemTime, UNIX_EPOCH};
+use std::any::Any;
 
 use crate::runtime::{Callable, ControlFlow, Interpreter, Value};
 
@@ -25,5 +26,9 @@ impl Callable for Clock {
 
     fn name(&self) -> &str {
         "clock"
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }

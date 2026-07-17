@@ -206,7 +206,7 @@ impl Visitor<InterpreterResult<Value>> for Interpreter {
         Ok(Value::Nil)
     }
 
-    fn visit_class_statement(&mut self, name: &Token, methods: Vec<Rc<Statement>>) -> InterpreterResult<Value> {
+    fn visit_class_statement(&mut self, name: &Token, methods: Vec<Rc<Statement>>, static_fields: Vec<Rc<Statement>>, static_methods: Vec<Rc<Statement>>) -> InterpreterResult<Value> {
         // Create a HashMap to hold the methods of the class by iterating over the provided method statements and converting them into Functions
         let methods: HashMap<String, Rc<Function>> = methods.iter().filter_map(|method| {
             if let Statement::Function { name: method_name, .. } = &*method.clone() {
@@ -216,10 +216,28 @@ impl Visitor<InterpreterResult<Value>> for Interpreter {
             }
         }).collect();
 
+        // Create a HashMap to hold the static fields of the class by iterating over the provided static field statements and evaluating their initializers
+        let static_fields: HashMap<String, Value> = static_fields.iter().filter_map(|field| {
+            if let Statement::Var { name: field_name, initializer, .. } = &*field.clone() {
+                Some((field_name.lexeme.clone(), self.visit_expression(initializer.as_ref().unwrap()).ok()?))
+            } else {
+                None
+            }
+        }).collect();
+
+        // Create a HashMap to hold the static methods of the class by iterating over the provided static method statements and converting them into Functions
+        let static_methods: HashMap<String, Rc<Function>> = static_methods.iter().filter_map(|method| {
+            if let Statement::Function { name: method_name, .. } = &*method.clone() {
+                Some((method_name.lexeme.clone(), Rc::new(Function::from_statement(method.clone(), self.environment.clone(), false).ok()?)))
+            } else {
+                None
+            }
+        }).collect();
+
         // Define the class in the current environment
         self.environment
             .borrow_mut()
-            .define(name.lexeme.to_string(), Value::Callable(Rc::new(Class { name: name.lexeme.clone(), methods: methods })));
+            .define(name.lexeme.to_string(), Value::Callable(Rc::new(Class { name: name.lexeme.clone(), methods, static_fields, static_methods })));
 
         Ok(Value::Nil)
     }
@@ -480,8 +498,26 @@ impl Visitor<InterpreterResult<Value>> for Interpreter {
 
         if let Value::Instance(instance) = object_value {
             Ok(instance.borrow().get(instance.clone(), name)?)
-        } else {
-            Self::error(name, "Only instances have fields.")
+        }
+
+        // Handle static field and method access for classes
+        else if let Value::Callable(class) = object_value {
+            // Check if the callable is a Class
+            if let Some(class) = class.as_any().downcast_ref::<Class>() {
+                if let Some(static_field_value) = class.get_static_field(&name.lexeme) {
+                    return Ok(static_field_value);
+                } else if let Some(static_method) = class.get_static_method(&name.lexeme) {
+                    return Ok(Value::Callable(static_method));
+                } else {
+                    return Self::error(name, &format!("Undefined static field or method '{}'.", name.lexeme));
+                }
+            } else {
+                return Self::error(name, "Only instances and classes have fields.");
+            }
+        }
+
+        else {
+            Self::error(name, "Only instances and classes have fields.")
         }
     }
 

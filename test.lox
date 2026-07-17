@@ -1,9 +1,23 @@
-var a = "global";
-{
-    fun showA() {
-        print a;
+class Bagel {
+    var shape = "torus";
+
+    static getShape() {
+        return Bagel.shape;
     }
-    showA();
-    var a = "block";
-    showA();
+
+    init(flavor) {
+        this.flavor = flavor;
+    }
+
+    eat() {
+        print "The " + this.flavor + " bagel is delicious!";
+        this.flavor = "Eaten";
+    }
 }
+
+var myBagel = Bagel("sesame");
+print myBagel.flavor; // Output: sesame
+myBagel.eat(); // Output: The sesame bagel is delicious!
+print myBagel.flavor; // Output: Eaten
+print Bagel.shape; // Output: torus
+print Bagel.getShape(); // Output: torus
