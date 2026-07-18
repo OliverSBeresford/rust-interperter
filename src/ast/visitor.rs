@@ -20,8 +20,7 @@ pub trait Visitor<T> {
     fn visit_get(&mut self, object: &Expr, name: &Token) -> T;
     fn visit_set(&mut self, object: &Expr, name: &Token, value: &Expr) -> T;
     fn visit_this(&mut self, keyword: &Token) -> T;
-    #[allow(non_snake_case)]
-    fn visit_THIS(&mut self, keyword: &Token) -> T;
+    fn visit_this_class(&mut self, keyword: &Token) -> T;
 
     // Statement visitor methods
     fn visit_expression_statement(&mut self, expression: &Expr) -> T;
@@ -49,7 +48,7 @@ pub trait Visitor<T> {
             Expr::Get { object, name } => self.visit_get(object, name),
             Expr::Set { object, name, value } => self.visit_set(object, name, value),
             Expr::This { keyword } => self.visit_this(keyword),
-            Expr::THIS { keyword } => self.visit_THIS(keyword),
+            Expr::ThisClass { keyword } => self.visit_this_class(keyword),
         }
     }
 

@@ -493,7 +493,7 @@ impl Visitor<InterpreterResult<Value>> for Interpreter {
         self.lookup_variable(keyword)
     }
 
-    fn visit_THIS(&mut self, keyword: &Token) -> InterpreterResult<Value> {
+    fn visit_this_class(&mut self, keyword: &Token) -> InterpreterResult<Value> {
         self.lookup_variable(keyword)
     }
 

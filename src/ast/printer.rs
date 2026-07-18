@@ -181,7 +181,7 @@ impl Visitor<Output> for AstPrinter {
         format!("{}this {}{}", open, keyword.lexeme, close)
     }
 
-    fn visit_THIS(&mut self, keyword: &Token) -> Output {
+    fn visit_this_class(&mut self, keyword: &Token) -> Output {
         let (open, close) = self.get_open_close();
         format!("{}This {}{}", open, keyword.lexeme, close)
     }

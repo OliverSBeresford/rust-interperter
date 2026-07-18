@@ -56,7 +56,7 @@ pub enum Expr {
     This {
         keyword: Token,
     },
-    THIS {
+    ThisClass {
         keyword: Token,
     },
     Lambda {

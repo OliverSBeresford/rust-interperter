@@ -357,7 +357,7 @@ impl Visitor<Output> for Resolver {
         Ok(())
     }
 
-    fn visit_THIS(&mut self, keyword: &Token) -> Output {
+    fn visit_this_class(&mut self, keyword: &Token) -> Output {
         // Error if 'this' used outside of a class or in a static method
         if self.current_class == ClassType::None {
             return Self::error(keyword, "Can't use 'this' outside of a class");

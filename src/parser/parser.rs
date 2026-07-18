@@ -710,7 +710,7 @@ impl Parser {
             }
             TokenType::Keyword(Keyword::Fun) => self.lambda_expression(),
             TokenType::Keyword(Keyword::This) => Ok(Expr::This { keyword: current_token }),
-            TokenType::Keyword(Keyword::THIS) => Ok(Expr::THIS { keyword: current_token }),
+            TokenType::Keyword(Keyword::ThisClass) => Ok(Expr::ThisClass { keyword: current_token }),
             TokenType::Identifier => Ok(Expr::Variable { name: current_token }),
             _ => Self::error(&current_token, "Expect expression."),
         }
