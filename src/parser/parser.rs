@@ -88,14 +88,6 @@ impl Parser {
         false
     }
 
-    /// Check if the token at a given offset from the current token is of one of the expected types
-    fn check_at(&self, offset: usize, expected: &[TokenType]) -> bool {
-        if let Some(token) = self.tokens.get(self.current + offset) {
-            return expected.contains(&token.token_type);
-        }
-        false
-    }
-
     // Consume a token of the expected type, or return an error
     fn consume(&mut self, expected: TokenType, error_message: &str) -> Result<Token, ParseError> {
         let current_token = self.advance()?;
@@ -257,22 +249,19 @@ impl Parser {
             static_fields.push(Rc::new(self.var_declaration()?));
         }
 
-        // Parse static methods (checks for 'static fun' syntax)
+        // Create vectors to hold the methods and static methods of the class
         let mut static_methods: Vec<Rc<Statement>> = Vec::new();
-        while self.check(&[TokenType::Keyword(Keyword::Static)]) && self.check_at(1, &[TokenType::Keyword(Keyword::Fun)]) {
-            // Consume the 'static' keyword
-            self.advance()?;
-            // Consume the 'fun' keyword
-            self.advance()?;
-            static_methods.push(Rc::new(self.function_declaration("static method")?));
-        }
-
-        // Parse the methods in the class
         let mut methods: Vec<Rc<Statement>> = Vec::new();
-        while self.check(&[TokenType::Keyword(Keyword::Fun)]) && self.current < self.tokens.len() - 1 {
-            // Consume the 'fun' keyword
-            self.advance()?;
-            methods.push(Rc::new(self.function_declaration("method")?));
+
+        // Parse methods and static methods until we find a '}'
+        while !self.check(&[TokenType::RightBrace]) && self.current < self.tokens.len() - 1 {
+            if self.check(&[TokenType::Keyword(Keyword::Static)]) {
+                // Consume the 'static' keyword
+                self.advance()?;
+                static_methods.push(Rc::new(self.function_declaration("static method")?));
+            } else {
+                methods.push(Rc::new(self.function_declaration("method")?));
+            }
         }
 
         // Consume the '}' token
