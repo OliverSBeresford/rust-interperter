@@ -26,7 +26,7 @@ This repository contains a near-complete Rust implementation of the Lox language
 	- Arithmetic, comparison, logical operators, and string concatenation
 	- Functions: first-class functions, closures (capture environment), `return` handling, arity checks
 	- Lambdas: create and call anonymous functions with captured closures
-	- Classes & instances: define classes, create instances, instance fields, methods, and method binding (`this`)
+	- Classes & instances: define classes, create instances, instance fields, methods, static fields, static methods, and method binding (`this` and `This`)
 	- Initializers (constructor-like `init` methods) return the instance
 
 - Native functions & extras
