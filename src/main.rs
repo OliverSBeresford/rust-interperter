@@ -92,6 +92,7 @@ fn main() {
             let statements = parser.parse();
             let statement_refs: Vec<Rc<Statement>> = statements.into_iter().map(|stmt| Rc::new(stmt)).collect();
 
+            // Resolve statements
             let mut resolver = Resolver::new();
             resolver.resolve_statements(statement_refs.clone());
 
