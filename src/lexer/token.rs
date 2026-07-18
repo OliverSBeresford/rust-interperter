@@ -1,4 +1,3 @@
-use phf::phf_map;
 use std::fmt;
 use heck::ToShoutySnakeCase;
 
@@ -24,31 +23,29 @@ pub enum Keyword {
     Static, // Added Static keyword for static methods
 }
 
-// static perfect-hash map from string -> Keyword
-static KEYWORDS: phf::Map<&'static str, Keyword> = phf_map! {
-    "and" => Keyword::And,
-    "class" => Keyword::Class,
-    "else" => Keyword::Else,
-    "false" => Keyword::False,
-    "for" => Keyword::For,
-    "fun" => Keyword::Fun,
-    "if" => Keyword::If,
-    "nil" => Keyword::Nil,
-    "or" => Keyword::Or,
-    "print" => Keyword::Print,
-    "return" => Keyword::Return,
-    "super" => Keyword::Super,
-    "this" => Keyword::This,
-    "This" => Keyword::ThisClass,
-    "true" => Keyword::True,
-    "var" => Keyword::Var,
-    "while" => Keyword::While,
-    "static" => Keyword::Static,
-};
-
 impl Keyword {
     pub fn from_str(s: &str) -> Option<Keyword> {
-        KEYWORDS.get(s).copied()
+        match s {
+            "and" => Some(Keyword::And),
+            "class" => Some(Keyword::Class),
+            "else" => Some(Keyword::Else),
+            "false" => Some(Keyword::False),
+            "for" => Some(Keyword::For),
+            "fun" => Some(Keyword::Fun),
+            "if" => Some(Keyword::If),
+            "nil" => Some(Keyword::Nil),
+            "or" => Some(Keyword::Or),
+            "print" => Some(Keyword::Print),
+            "return" => Some(Keyword::Return),
+            "super" => Some(Keyword::Super),
+            "this" => Some(Keyword::This),
+            "This" => Some(Keyword::ThisClass),
+            "true" => Some(Keyword::True),
+            "var" => Some(Keyword::Var),
+            "while" => Some(Keyword::While),
+            "static" => Some(Keyword::Static),
+            _ => None,
+        }
     }
 }
 
