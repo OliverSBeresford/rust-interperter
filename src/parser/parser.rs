@@ -202,18 +202,16 @@ impl Parser {
 
         // Parse the parameters
         let mut params: Vec<Token> = Vec::new();
-        if !self.check(&[TokenType::RightParen]) {
-            loop {
-                // Consume the parameter name
-                let param_token = self.consume(TokenType::Identifier, "Expect parameter name.")?;
-                params.push(param_token);
+        loop {
+            // Consume the parameter name
+            let param_token = self.consume(TokenType::Identifier, "Expect parameter name.")?;
+            params.push(param_token);
 
-                if !self.check(&[TokenType::Comma]) {
-                    break;
-                }
-                // Consume the ',' token
-                let _comma_token = self.advance();
+            if !self.check(&[TokenType::Comma]) {
+                break;
             }
+            // Consume the ',' token
+            let _comma_token = self.advance();
         }
 
         // Consume the ')' token
