@@ -501,7 +501,7 @@ impl Visitor<InterpreterResult<Value>> for Interpreter {
         let object_value = self.visit_expression(object)?;
 
         if let Value::Instance(instance) = object_value {
-            Ok(instance.borrow().get(instance.clone(), name)?)
+            Ok(instance.borrow().get(instance.clone(), name, self)?)
         }
 
         // Handle static field and method access for classes

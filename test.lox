@@ -1,24 +1,10 @@
-class Bagel {
-    var shape = "torus";
-
-    static getShape() {
-        return This.shape;
+class Circle {
+    init(radius) {
+        this.radius = radius;
     }
-
-    init(flavor) {
-        this.flavor = flavor;
-        print This.shape; // Output: torus
-    }
-
-    eat() {
-        print "The " + this.flavor + " bagel is delicious!";
-        this.flavor = "Eaten";
+    area {
+        return 3.141592653 * this.radius * this.radius;
     }
 }
-
-var myBagel = Bagel("sesame");
-print myBagel.flavor; // Output: sesame
-myBagel.eat(); // Output: The sesame bagel is delicious!
-print myBagel.flavor; // Output: Eaten
-print Bagel.shape; // Output: torus
-print Bagel.getShape(); // Output: torus
+var circle = Circle(4);
+print circle.area; // Prints roughly "50.2655".

@@ -88,6 +88,14 @@ impl Parser {
         false
     }
 
+    /// Check if the token at a given offset from the current token is of one of the expected types
+    fn check_at(&self, offset: usize, expected: &[TokenType]) -> bool {
+        if let Some(token) = self.tokens.get(self.current + offset) {
+            return expected.contains(&token.token_type);
+        }
+        false
+    }
+
     // Consume a token of the expected type, or return an error
     fn consume(&mut self, expected: TokenType, error_message: &str) -> Result<Token, ParseError> {
         let current_token = self.advance()?;
@@ -228,7 +236,25 @@ impl Parser {
             return Self::error(&name_token, "Expect function body.");
         };
 
-        Ok(Statement::Function { name: name_token, params, body })
+        Ok(Statement::Function { name: name_token, params, body, is_getter: false })
+    }
+
+    fn getter_declaration(&mut self) -> Result<Statement, ParseError> {
+        // Consume the getter name
+        let name_token = self.consume(TokenType::Identifier, "Expect getter name.")?;
+
+        // Consume the '{' token
+        self.consume(
+            TokenType::LeftBrace,
+            "Expect '{' before getter body.",
+        )?;
+
+        // Parse the getter body
+        let Statement::Block { statements: body } = self.block_statement()? else {
+            return Self::error(&name_token, "Expect getter body.");
+        };
+
+        Ok(Statement::Function { name: name_token, params: Vec::new(), body, is_getter: true })
     }
 
     fn class_declaration(&mut self) -> Result<Statement, ParseError> {
@@ -257,6 +283,11 @@ impl Parser {
                 // Consume the 'static' keyword
                 self.advance()?;
                 static_methods.push(Rc::new(self.function_declaration("static method")?));
+            }
+            // Check if the next token is an identifier followed by a '{', which indicates a getter method
+            else if self.check(&[TokenType::Identifier]) && self.check_at(1, &[TokenType::LeftBrace]) {
+                // This is a getter method, which has no parameters
+                methods.push(Rc::new(self.getter_declaration()?));
             } else {
                 methods.push(Rc::new(self.function_declaration("method")?));
             }

@@ -15,12 +15,13 @@ pub struct Function {
     pub body: Vec<Rc<Statement>>,
     pub closure: EnvRef,
     is_initializer: bool,
+    pub is_getter: bool, // New field to indicate if this function is a getter
 }
 
 impl Function {
     // Create a Function from a Statement::Function
     pub fn from_statement(stmt: Rc<Statement>, closure: EnvRef, is_initializer: bool) -> FunctionResult<Self> {
-        if let Statement::Function { name, params, body } = &*stmt {
+        if let Statement::Function { name, params, body, is_getter } = &*stmt {
             Ok(Function {
                 name: name.lexeme.clone(),
                 params: params.iter().map(|param| param.lexeme.clone()).collect(),
@@ -28,6 +29,7 @@ impl Function {
                 body: body.clone(),
                 closure,
                 is_initializer,
+                is_getter: *is_getter,
             })
         } else {
             // This should not happen if used correctly (even if the user makes a mistake)
@@ -39,7 +41,7 @@ impl Function {
     }
 
     pub fn new(name: String, params: Vec<String>, body: Vec<Rc<Statement>>, closure: EnvRef, is_initializer: bool) -> Self {
-        Function { name, params, body, closure, is_initializer }
+        Function { name, params, body, closure, is_initializer, is_getter: false }
     }
 
     pub fn bind(&self, instance: Rc<RefCell<Instance>>) -> Self {
@@ -57,6 +59,7 @@ impl Function {
             body: self.body.clone(),
             closure: bound_closure,
             is_initializer: self.is_initializer,
+            is_getter: self.is_getter,
         }
     }
 
@@ -72,6 +75,7 @@ impl Function {
             body: self.body.clone(),
             closure: bound_closure,
             is_initializer: self.is_initializer,
+            is_getter: self.is_getter,
         }
     }
 

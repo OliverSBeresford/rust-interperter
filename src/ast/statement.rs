@@ -33,6 +33,7 @@ pub enum Statement {
         name: Token,
         params: Vec<Token>,
         body: Vec<Rc<Statement>>,
+        is_getter: bool, // New field to indicate if this function is a getter
     },
     Return {
         keyword: Token,

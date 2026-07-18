@@ -248,7 +248,7 @@ impl Visitor<Output> for AstPrinter {
 
     fn visit_function_statement(&mut self, statement: Rc<Statement>) -> Output {
         match &*statement {
-            Statement::Function { name, params, body } => {
+            Statement::Function { name, params, body, .. } => {
                 let param_list: Vec<String> = params.iter().map(|p| p.lexeme.clone()).collect();
                 let (open, close) = self.get_open_close();
                 self.depth += 1;
