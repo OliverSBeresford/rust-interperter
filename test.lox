@@ -2,10 +2,10 @@ fun thing() {
     print "Hello, world!";
 }
 
-class Doughnut {
+class Donut {
     cook() {
         print "Fry until golden brown.";
     }
 }
-class BostonCream < Doughnut {}
+class BostonCream < Donut {}
 BostonCream().cook();
