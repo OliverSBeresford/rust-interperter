@@ -14,13 +14,13 @@ pub enum Keyword {
     Or,
     Print,
     Return,
+    Static,
     Super,
     This,
     ThisClass,
     True,
     Var,
     While,
-    Static, // Added Static keyword for static methods
 }
 
 impl Keyword {
