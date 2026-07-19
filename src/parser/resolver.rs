@@ -378,7 +378,7 @@ impl Visitor<Output> for Resolver {
         Ok(())
     }
 
-    fn visit_class_statement(&mut self, name: &Token, methods: Vec<Rc<Statement>>, static_fields: Vec<Rc<Statement>>, static_methods: Vec<Rc<Statement>>) -> Output {
+    fn visit_class_statement(&mut self, name: &Token, superclass: &Option<Expr>, methods: Vec<Rc<Statement>>, static_fields: Vec<Rc<Statement>>, static_methods: Vec<Rc<Statement>>) -> Output {
         // Keep track of the enclosing class type
         let enclosing_class: ClassType = self.current_class;
         self.current_class = ClassType::Class;
@@ -386,6 +386,19 @@ impl Visitor<Output> for Resolver {
         // Declare the class name
         self.declare(name)?;
         self.define(name)?;
+
+        // Resolve the superclass if it exists
+        if let Some(superclass_expr) = superclass {
+            // Error if class inherits from itself
+            if let Expr::Variable { name: superclass_name } = superclass_expr {
+                if superclass_name.lexeme == name.lexeme {
+                    return Self::error(superclass_name, "A class can't inherit from itself");
+                }
+            }
+
+            // Resolve the superclass expression
+            self.visit_expression(superclass_expr)?;
+        }
 
         // Resolve static fields
         for static_field in static_fields {

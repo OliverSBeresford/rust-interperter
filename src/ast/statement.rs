@@ -41,6 +41,7 @@ pub enum Statement {
     },
     Class {
         name: Token,
+        superclass: Option<Expr>,
         methods: Vec<Rc<Statement>>,
         static_fields: Vec<Rc<Statement>>,
         static_methods: Vec<Rc<Statement>>,

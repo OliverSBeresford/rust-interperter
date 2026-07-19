@@ -31,7 +31,7 @@ pub trait Visitor<T> {
     fn visit_while_statement(&mut self, condition: &Expr, body: Rc<Statement>) -> T;
     fn visit_function_statement(&mut self, statement: Rc<Statement>) -> T;
     fn visit_return_statement(&mut self, keyword: &Token, value: &Option<Expr>) -> T;
-    fn visit_class_statement(&mut self, name: &Token, methods: Vec<Rc<Statement>>, static_fields: Vec<Rc<Statement>>, static_methods: Vec<Rc<Statement>>) -> T;
+    fn visit_class_statement(&mut self, name: &Token, superclass: &Option<Expr>, methods: Vec<Rc<Statement>>, static_fields: Vec<Rc<Statement>>, static_methods: Vec<Rc<Statement>>) -> T;
 
     fn visit_expression(&mut self, expr: &Expr) -> T {
         match expr {
@@ -62,7 +62,7 @@ pub trait Visitor<T> {
             Statement::While { condition, body } => self.visit_while_statement(condition, body.clone()),
             Statement::Function { .. } => self.visit_function_statement(statement),
             Statement::Return { keyword, value } => self.visit_return_statement(keyword, value),
-            Statement::Class { name, methods, static_fields, static_methods } => self.visit_class_statement(name, methods.clone(), static_fields.clone(), static_methods.clone()),
+            Statement::Class { name, superclass, methods, static_fields, static_methods } => self.visit_class_statement(name, superclass, methods.clone(), static_fields.clone(), static_methods.clone()),
         }
     }
 }

@@ -275,10 +275,16 @@ impl Visitor<Output> for AstPrinter {
         }
     }
 
-    fn visit_class_statement(&mut self, name: &Token, methods: Vec<Rc<Statement>>, static_fields: Vec<Rc<Statement>>, static_methods: Vec<Rc<Statement>>) -> Output {
+    fn visit_class_statement(&mut self, name: &Token, superclass: &Option<Expr>, methods: Vec<Rc<Statement>>, static_fields: Vec<Rc<Statement>>, static_methods: Vec<Rc<Statement>>) -> Output {
         let (open, close) = self.get_open_close();
         self.depth += 1;
-        let mut inner = format!("class {}", name.lexeme);
+        // If there is a superclass, visit it and include it in the output
+        let superclass_str = if let Some(superclass_expr) = superclass {
+            format!("< {}", self.visit_expression(superclass_expr))
+        } else {
+            String::new()
+        };
+        let mut inner = format!("class {} {}", name.lexeme, superclass_str);
 
         // Iterate over methods, static fields, and static methods and append their string representations
         for method in methods {

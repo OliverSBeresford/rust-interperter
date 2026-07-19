@@ -264,6 +264,18 @@ impl Parser {
         // Consume the class name
         let name_token = self.consume(TokenType::Identifier, "Expect class name.")?;
 
+        // Optional superclass specified by '<', stored as a variable expression
+        let superclass: Option<Expr> = if self.check(&[TokenType::Less]) {
+            // Consume the '<' token
+            self.advance()?;
+
+            // Consume the superclass name
+            let superclass_token = self.consume(TokenType::Identifier, "Expect superclass name.")?;
+            Some(Expr::Variable { name: superclass_token })
+        } else {
+            None
+        };
+
         // Consume the '{' token
         self.consume(TokenType::LeftBrace, "Expect '{' before class body.")?;
 
@@ -296,7 +308,7 @@ impl Parser {
         // Consume the '}' token
         self.consume(TokenType::RightBrace, "Expect '}' after class body.")?;
 
-        Ok(Statement::Class { name: name_token, methods, static_fields, static_methods })
+        Ok(Statement::Class { name: name_token, superclass, methods, static_fields, static_methods })
     }
 
     fn statement(&mut self) -> Result<Statement, ParseError> {

@@ -12,14 +12,15 @@ pub type FunctionResult<T> = Result<T, ControlFlow>;
 #[derive(Debug)]
 pub struct Class {
     pub name: String,
+    pub superclass: Option<Rc<Class>>,
     pub methods: HashMap<String, Rc<Function>>,
     pub static_fields: HashMap<String, Value>,
     pub static_methods: HashMap<String, Rc<Function>>,
 }
 
 impl Class {
-    pub fn new(name: String, methods: HashMap<String, Rc<Function>>, static_fields: HashMap<String, Value>, static_methods: HashMap<String, Rc<Function>>) -> Self {
-        Class { name, methods, static_fields, static_methods }
+    pub fn new(name: String, superclass: Option<Rc<Class>>, methods: HashMap<String, Rc<Function>>, static_fields: HashMap<String, Value>, static_methods: HashMap<String, Rc<Function>>) -> Self {
+        Class { name, superclass, methods, static_fields, static_methods }
     }
 
     pub fn find_method(&self, name: &str) -> Option<Rc<Function>> {
