@@ -305,4 +305,14 @@ impl Visitor<Output> for AstPrinter {
         
         format!("{}{}{}", open, inner, close)
     }
+
+    fn visit_break_statement(&mut self, _keyword: &Token) -> Output {
+        let (open, close) = self.get_open_close();
+        format!("{}break{}", open, close)
+    }
+
+    fn visit_continue_statement(&mut self, _keyword: &Token) -> Output {
+        let (open, close) = self.get_open_close();
+        format!("{}continue{}", open, close)
+    }
 }

@@ -5,4 +5,6 @@ use crate::runtime::{RuntimeError, Value};
 pub enum ControlFlow {
     Return(Value),
     RuntimeError(RuntimeError),
+    Break,
+    Continue,
 }

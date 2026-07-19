@@ -119,6 +119,9 @@ impl Callable for Function {
             Err(ControlFlow::RuntimeError(runtime_error)) => {
                 return Err(ControlFlow::RuntimeError(runtime_error));
             }
+            Err(other) => {
+                return Err(other);
+            }
         }
 
         // If the function is an initializer, return the instance bound to "this" in the closure; otherwise, return Nil

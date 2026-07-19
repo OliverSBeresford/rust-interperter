@@ -330,6 +330,10 @@ impl Parser {
             return self.for_statement();
         } else if self.check(&[TokenType::Keyword(Keyword::Return)]) {
             return self.return_statement();
+        } else if self.check(&[TokenType::Keyword(Keyword::Break)]) {
+            return self.break_statement();
+        } else if self.check(&[TokenType::Keyword(Keyword::Continue)]) {
+            return self.continue_statement();
         } else {
             return self.expression_statement();
         }
@@ -510,6 +514,26 @@ impl Parser {
         self.consume(TokenType::Semicolon, "Expect ';' after return value.")?;
 
         Ok(Statement::Return { keyword, value })
+    }
+
+    fn break_statement(&mut self) -> Result<Statement, ParseError> {
+        // Consume the 'break' keyword
+        let keyword = self.advance()?;
+
+        // Consume the semicolon at the end of the break statement
+        self.consume(TokenType::Semicolon, "Expect ';' after 'break'.")?;
+
+        Ok(Statement::Break { keyword })
+    }
+
+    fn continue_statement(&mut self) -> Result<Statement, ParseError> {
+        // Consume the 'continue' keyword
+        let keyword = self.advance()?;
+
+        // Consume the semicolon at the end of the continue statement
+        self.consume(TokenType::Semicolon, "Expect ';' after 'continue'.")?;
+
+        Ok(Statement::Continue { keyword })
     }
 
     pub fn expression(&mut self) -> Result<Expr, ParseError> {

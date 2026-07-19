@@ -186,7 +186,15 @@ impl Visitor<InterpreterResult<Value>> for Interpreter {
     fn visit_while_statement(&mut self, condition: &Expr, body: Rc<Statement>) -> InterpreterResult<Value> {
         // Evaluate the condition and execute the body while the condition is truthy
         while Self::is_truthy(&self.visit_expression(condition)?) {
-            self.visit_statement(body.clone())?;
+            let result = self.visit_statement(body.clone()).err();
+            // Handle break and continue control flow
+            if let Some(control_flow) = result {
+                match control_flow {
+                    ControlFlow::Break => return Ok(Value::Nil),
+                    ControlFlow::Continue => continue,
+                    _ => return Err(control_flow),
+                }
+            }
         }
 
         // Doesn't return anything
@@ -281,6 +289,15 @@ impl Visitor<InterpreterResult<Value>> for Interpreter {
 
         // Use ControlFlow to signal a return
         Err(ControlFlow::Return(return_value))
+    }
+
+    fn visit_break_statement(&mut self, _keyword: &Token) -> InterpreterResult<Value> {
+        // Use ControlFlow to signal a break
+        Err(ControlFlow::Break)
+    }
+
+    fn visit_continue_statement(&mut self, _keyword: &Token) -> InterpreterResult<Value> {
+        Err(ControlFlow::Continue)
     }
 
     fn visit_binary(&mut self, left: &Expr, operator: &Token, right: &Expr) -> InterpreterResult<Value> {
@@ -546,7 +563,7 @@ impl Visitor<InterpreterResult<Value>> for Interpreter {
         if let Ok(value) = superclass_rc.clone().get(property) {
             return Ok(value);
         }
-        
+
         // Look up the instance (this) in the environment one level above the one where 'super' is defined
         let Value::Instance(object) = self.environment.borrow().get_at(distance - 1, "this", keyword.line)? else {
             return Self::error(keyword, "\'this\' must be an instance.");

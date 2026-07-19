@@ -4,7 +4,9 @@ use heck::ToShoutySnakeCase;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Keyword {
     And,
+    Break,
     Class,
+    Continue,
     Else,
     False,
     For,
@@ -27,7 +29,9 @@ impl Keyword {
     pub fn from_str(s: &str) -> Option<Keyword> {
         match s {
             "and" => Some(Keyword::And),
+            "break" => Some(Keyword::Break),
             "class" => Some(Keyword::Class),
+            "continue" => Some(Keyword::Continue),
             "else" => Some(Keyword::Else),
             "false" => Some(Keyword::False),
             "for" => Some(Keyword::For),

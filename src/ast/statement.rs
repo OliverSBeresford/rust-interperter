@@ -26,6 +26,12 @@ pub enum Statement {
         condition: Expr,
         body: Rc<Statement>,
     },
+    Break {
+        keyword: Token,
+    },
+    Continue {
+        keyword: Token,
+    },
     Block {
         statements: Vec<Rc<Statement>>,
     },

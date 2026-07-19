@@ -33,6 +33,8 @@ pub trait Visitor<T> {
     fn visit_function_statement(&mut self, statement: Rc<Statement>) -> T;
     fn visit_return_statement(&mut self, keyword: &Token, value: &Option<Expr>) -> T;
     fn visit_class_statement(&mut self, name: &Token, superclass: &Option<Expr>, methods: Vec<Rc<Statement>>, static_fields: Vec<Rc<Statement>>, static_methods: Vec<Rc<Statement>>) -> T;
+    fn visit_break_statement(&mut self, keyword: &Token) -> T;
+    fn visit_continue_statement(&mut self, keyword: &Token) -> T;
 
     fn visit_expression(&mut self, expr: &Expr) -> T {
         match expr {
@@ -65,6 +67,8 @@ pub trait Visitor<T> {
             Statement::Function { .. } => self.visit_function_statement(statement),
             Statement::Return { keyword, value } => self.visit_return_statement(keyword, value),
             Statement::Class { name, superclass, methods, static_fields, static_methods } => self.visit_class_statement(name, superclass, methods.clone(), static_fields.clone(), static_methods.clone()),
+            Statement::Break { keyword } => self.visit_break_statement(keyword),
+            Statement::Continue { keyword } => self.visit_continue_statement(keyword),
         }
     }
 }

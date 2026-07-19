@@ -29,6 +29,12 @@ enum ClassType {
     None,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum LoopType {
+    Loop,
+    None,
+}
+
 #[derive(Debug, Copy, Clone)]
 pub enum Depth {
     Unresolved,
@@ -39,6 +45,7 @@ pub struct Resolver {
     scopes: Vec<Lookup>,
     current_function: FunctionType,
     current_class: ClassType,
+    current_loop: LoopType,
     pub locals: HashMap<*const Token, Depth>, // Maps expression IDs to their resolved depth
 }
 
@@ -49,6 +56,7 @@ impl Resolver {
             scopes: Vec::new(),
             current_function: FunctionType::None,
             current_class: ClassType::None,
+            current_loop: LoopType::None,
             locals: HashMap::new(),
         }
     }
@@ -242,9 +250,34 @@ impl Visitor<Output> for Resolver {
     /// Resolve a while statement by resolving its condition and body
     fn visit_while_statement(&mut self, condition: &Expr, body: Rc<Statement>) -> Output {
         self.visit_expression(condition)?;
+
+        // Visit the body of the loop with the current loop type set to Loop
+        let enclosing_loop = self.current_loop;
+        self.current_loop = LoopType::Loop;
         self.visit_statement(body)?;
+        self.current_loop = enclosing_loop;
 
         return Ok(())
+    }
+
+    /// Resolve a break statement by checking if it's inside a loop
+    fn visit_break_statement(&mut self, keyword: &Token) -> Output {
+        // Error if break used outside of a loop
+        if self.current_loop == LoopType::None {
+            return Self::error(keyword, "Can't use 'break' outside of a loop");
+        }
+
+        Ok(())
+    }
+
+    /// Resolve a continue statement by checking if it's inside a loop
+    fn visit_continue_statement(&mut self, keyword: &Token) -> Output {
+        // Error if continue used outside of a loop
+        if self.current_loop == LoopType::None {
+            return Self::error(keyword, "Can't use 'continue' outside of a loop");
+        }
+
+        Ok(())
     }
 
     /// Resolve a function statement by declaring its name and resolving its parameters and body
