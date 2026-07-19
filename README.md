@@ -13,7 +13,7 @@ This repository contains a near-complete Rust implementation of the Lox language
 	- Call and property access (`call`, `.`)
 	- Function declarations and anonymous functions (lambdas)
 	- Class declarations and method parsing (including `init` as an initializer)
-	- Control flow statements: `if`/`else`, `while`, `for` (desugared to `while`), `print`, `return`
+	- Control flow statements: `if`/`else`, `while`, `for` (desugared to `while`), `print`, `return`, `break`, `continue`
 	- Variable declarations and assignments
 
 - Static analysis / resolver
