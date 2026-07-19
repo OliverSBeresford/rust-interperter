@@ -1,4 +1,5 @@
 use std::rc::Rc;
+use std::process;
 
 use crate::{
     ast::{Expr, Statement},
@@ -126,17 +127,22 @@ impl Parser {
 
     pub fn parse(&mut self) -> Vec<Statement> {
         let mut statements: Vec<Statement> = Vec::new();
+        let mut error: bool = false;
 
         // Parse statements until the end of the token stream (-1 for EOF)
         while self.current < self.tokens.len() - 1 {
             let statement = self.declaration();
             if let Err(e) = &statement {
                 eprintln!("{}", e);
+                error = true;
             } else if let Ok(statement) = statement {
                 statements.push(statement);
             }
         }
-
+       
+        if error {
+            process::exit(1);
+        }
         statements
     }
 
