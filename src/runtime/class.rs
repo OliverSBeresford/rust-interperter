@@ -23,18 +23,40 @@ impl Class {
         Class { name, superclass, methods, static_fields, static_methods }
     }
 
+    /// Finds a method in the class or its superclass chain by name.
     pub fn find_method(&self, name: &str) -> Option<Rc<Function>> {
-        self.methods.get(name).cloned()
+        if let Some(method) = self.methods.get(name) {
+            Some(method.clone())
+        } else if let Some(superclass) = &self.superclass {
+            superclass.find_method(name)
+        } else {
+            None
+        }
     }
 
+    /// Finds a static method in the class or its superclass chain by name.
     pub fn get_static_method(&self, name: &str) -> Option<Rc<Function>> {
-        self.static_methods.get(name).cloned()
+        if let Some(method) = self.static_methods.get(name) {
+            Some(method.clone())
+        } else if let Some(superclass) = &self.superclass {
+            superclass.get_static_method(name)
+        } else {
+            None
+        }
     }
 
+    /// Finds a static field in the class or its superclass chain by name.
     pub fn get_static_field(&self, name: &str) -> Option<Value> {
-        self.static_fields.get(name).cloned()
+        if let Some(value) = self.static_fields.get(name) {
+            Some(value.clone())
+        } else if let Some(superclass) = &self.superclass {
+            superclass.get_static_field(name)
+        } else {
+            None
+        }
     }
 
+    /// Gets a static property (field or method) by name. Returns an error if the property is not found.
     pub fn get(self: Rc<Self>, name: &Token) -> Result<Value, ControlFlow> {
         // Check if it's a static field
         if let Some(value) = self.get_static_field(&name.lexeme) {
