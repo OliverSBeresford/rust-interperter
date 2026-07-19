@@ -1,11 +1,27 @@
-fun thing() {
-    print "Hello, world!";
-}
+class A {
+    var a = "A";
 
-class Donut {
-    cook() {
-        print "Fry until golden brown.";
+    method() {
+        print "Method A";
     }
 }
-class BostonCream < Donut {}
-BostonCream().cook();
+class B < A {
+    init() {
+        print "Init B";
+        print super.a;
+    }
+
+    method() {
+        print "Method B";
+    }
+    test() {
+        super.method();
+    }
+}
+class C < B {
+    init() {
+        super.init();
+        print "Init C";
+    }
+}
+C().test();

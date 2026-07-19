@@ -25,6 +25,7 @@ enum FunctionType {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum ClassType {
     Class,
+    Subclass,
     None,
 }
 
@@ -368,6 +369,19 @@ impl Visitor<Output> for Resolver {
         Ok(())
     }
 
+    fn visit_super(&mut self, keyword: &Token, _property: &Token) -> Output {
+        // Error if 'super' used outside of a subclass
+        if self.current_class == ClassType::None {
+            return Self::error(keyword, "Can't use 'super' outside of a class");
+        } else if self.current_class != ClassType::Subclass {
+            return Self::error(keyword, "Can't use 'super' in a class with no superclass");
+        }
+
+        self.resolve_local(keyword)?;
+
+        Ok(())
+    }
+
     fn visit_lambda(&mut self, params: &Vec<Token>, body: Vec<Rc<Statement>>) -> Output {
         self.resolve_function(params, body, FunctionType::Function)?;
 
@@ -396,8 +410,14 @@ impl Visitor<Output> for Resolver {
                 }
             }
 
+            self.current_class = ClassType::Subclass;
+
             // Resolve the superclass expression
             self.visit_expression(superclass_expr)?;
+
+            // Begin a new scope for the superclass and define 'super' in the scope
+            self.begin_scope()?;
+            self.scopes.last_mut().unwrap().borrow_mut().insert("super".to_string(), true);
         }
 
         // Resolve static fields
@@ -433,6 +453,11 @@ impl Visitor<Output> for Resolver {
         }
 
         self.end_scope()?;
+
+        // End the superclass scope if it exists
+        if superclass.is_some() {
+            self.end_scope()?;
+        }
 
         // Restore the previous class type
         self.current_class = enclosing_class;

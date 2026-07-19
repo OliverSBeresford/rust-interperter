@@ -745,6 +745,18 @@ impl Parser {
             }
             TokenType::Keyword(Keyword::Fun) => self.lambda_expression(),
             TokenType::Keyword(Keyword::This) => Ok(Expr::This { keyword: current_token }),
+            TokenType::Keyword(Keyword::Super) => {
+                // Consume the '.' token
+                self.consume(TokenType::Dot, "Expect '.' after 'super'.")?;
+
+                // Consume the method name
+                let property_token = self.consume(TokenType::Identifier, "Expect superclass property name.")?;
+
+                Ok(Expr::Super {
+                    keyword: current_token,
+                    property: property_token,
+                })
+            }
             TokenType::Keyword(Keyword::ThisClass) => Ok(Expr::ThisClass { keyword: current_token }),
             TokenType::Identifier => Ok(Expr::Variable { name: current_token }),
             _ => Self::error(&current_token, "Expect expression."),

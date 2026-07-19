@@ -12,7 +12,7 @@ pub type EnvResult<T> = Result<T, ControlFlow>;
 #[derive(Debug)]
 pub struct Environment {
     // Stores enclosing environment (if any)
-    enclosing: Option<EnvRef>,
+    pub enclosing: Option<EnvRef>,
 
     // Stores variable names and their associated values
     values: HashMap<String, Value>,

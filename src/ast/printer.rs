@@ -186,6 +186,11 @@ impl Visitor<Output> for AstPrinter {
         format!("{}This {}{}", open, keyword.lexeme, close)
     }
 
+    fn visit_super(&mut self, keyword: &Token, property: &Token) -> Output {
+        let (open, close) = self.get_open_close();
+        format!("{}super {} .{}{}", open, keyword.lexeme, property.lexeme, close)
+    }
+
     fn visit_expression_statement(&mut self, expression: &Expr) -> Output {
         let (open, close) = self.get_open_close();
         self.depth += 1;

@@ -216,12 +216,18 @@ impl Visitor<InterpreterResult<Value>> for Interpreter {
                 return Self::error(name, "Superclass must be a class.");
             };
             // Check if the superclass is a Class
-            if let Ok(superclass_rc) = superclass.into_any_rc().downcast::<Class>() {
+            if let Ok(superclass_rc) = superclass.clone().into_any_rc().downcast::<Class>() {
                 // Set the superclass
                 superclass_option = Some(superclass_rc);
             } else {
                 return Self::error(name, "Superclass must be a class.");
             };
+
+            // Create a new environment for the superclass scope
+            self.environment = Environment::new(Some(self.environment.clone()));
+            self.environment
+                .borrow_mut()
+                .define("super".to_string(), Value::Callable(superclass.clone()));
         };
         
         // Create a HashMap to hold the methods of the class by iterating over the provided method statements and converting them into Functions
@@ -250,6 +256,12 @@ impl Visitor<InterpreterResult<Value>> for Interpreter {
                 None
             }
         }).collect();
+
+        // Restore the previous environment after processing the superclass
+        if superclass.is_some() {
+            let enclosing_env = self.environment.borrow().enclosing.clone().unwrap();
+            self.environment = enclosing_env;
+        }
 
         // Define the class in the current environment
         self.environment
@@ -512,6 +524,41 @@ impl Visitor<InterpreterResult<Value>> for Interpreter {
 
     fn visit_this_class(&mut self, keyword: &Token) -> InterpreterResult<Value> {
         self.lookup_variable(keyword)
+    }
+
+    fn visit_super(&mut self, keyword: &Token, property: &Token) -> InterpreterResult<Value> {
+        let distance = match self.resolver.get_depth(keyword) {
+            Depth::Resolved(d) => d,
+            Depth::Unresolved => {
+                return Self::error(keyword, "Unresolved 'super' keyword.");
+            }
+        };
+        // Look up the superclass in the current environment
+        let superclass_value = self.environment.borrow().get_at(distance, "super", keyword.line)?;
+        let Value::Callable(superclass) = superclass_value else {
+            return Self::error(keyword, "Superclass must be a class.");
+        };
+        let Ok(superclass_rc) = superclass.clone().into_any_rc().downcast::<Class>() else {
+            return Self::error(keyword, "Superclass must be a class.");
+        };
+
+        // Look up the property in the superclass's static fields or methods
+        if let Ok(value) = superclass_rc.clone().get(property) {
+            return Ok(value);
+        }
+        
+        // Look up the instance (this) in the environment one level above the one where 'super' is defined
+        let Value::Instance(object) = self.environment.borrow().get_at(distance - 1, "this", keyword.line)? else {
+            return Self::error(keyword, "\'this\' must be an instance.");
+        };
+
+        // Look up the method in the superclass
+        if let Some(method) = superclass_rc.find_method(&property.lexeme) {
+            // Bind the method to the instance and return it as a callable Value
+            return Ok(Value::Callable(Rc::new(method.bind(object))));
+        } else {
+            Self::error(property, &format!("Undefined method '{}'.", property.lexeme))
+        }
     }
 
     fn visit_get(&mut self, object: &Expr, name: &Token) -> InterpreterResult<Value> {

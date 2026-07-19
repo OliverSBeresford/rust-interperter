@@ -59,6 +59,10 @@ pub enum Expr {
     ThisClass {
         keyword: Token,
     },
+    Super {
+        keyword: Token,
+        property: Token,
+    },
     Lambda {
         params: Vec<Token>,
         body: Vec<Rc<Statement>>,
